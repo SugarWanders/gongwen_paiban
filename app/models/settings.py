@@ -23,6 +23,7 @@ COMMON_FONTS = [
     "方正大标宋简体",
     "方正仿宋_GBK",
     "方正仿宋简体",
+    "黑体",
     "方正黑体_GBK",
     "方正黑体简体",
     "方正楷体_GBK",
@@ -66,7 +67,7 @@ DEFAULT_TEMPLATE = TemplateConfig(
     margins_mm=MarginConfig(),
     line_spacing_pt=30,
     title=TextStyleConfig(font_family="方正小标宋简体", font_size_hao="二号"),
-    h1=TextStyleConfig(font_family="方正黑体简体", font_size_hao="小二"),
+    h1=TextStyleConfig(font_family="黑体", font_size_hao="小二"),
     h2=TextStyleConfig(font_family="楷体_GB2312", font_size_hao="小二"),
     body=TextStyleConfig(font_family="仿宋_GB2312", font_size_hao="小二"),
 )

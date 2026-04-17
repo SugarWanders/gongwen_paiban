@@ -78,7 +78,7 @@ def build_stylesheet() -> str:
 
     QLabel#footerHint {{
         color: #A8B5C7;
-        font-size: 7.5pt;
+        font-size: 8.5pt;
         padding: 0 4px 0 4px;
         min-height: 12px;
     }}

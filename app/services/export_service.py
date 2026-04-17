@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 from pathlib import Path
@@ -7,7 +7,7 @@ from app.models.settings import TemplateConfig, hao_to_pt
 from app.services.title_classifier import classify_paragraphs
 
 
-INVALID_FILENAME_CHARS = re.compile(r'[\/:*?"<>|]+')
+INVALID_FILENAME_CHARS = re.compile(r'[\\/:*?"<>|]+')
 
 
 def export_docx_document(text: str, template: TemplateConfig, save_directory: str) -> str:
@@ -55,8 +55,6 @@ def export_docx_document(text: str, template: TemplateConfig, save_directory: st
 
         if paragraph_type == "title":
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            if len(paragraphs) > 1:
-                paragraph.paragraph_format.space_after = Pt(template.line_spacing_pt)
         else:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
 

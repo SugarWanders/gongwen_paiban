@@ -7,33 +7,87 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QAbstractSpinBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
     QMainWindow,
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSplitter,
+    QSpinBox,
     QStatusBar,
     QVBoxLayout,
     QWidget,
-    QSpinBox,
 )
 
 from app.models.settings import HAO_TO_PT, MarginConfig, TemplateConfig, TextStyleConfig
 from app.services.document_importer import import_text_document
 from app.services.export_service import export_docx_document
-from app.services.font_service import get_common_fonts
-from app.services.template_store import load_default_template, save_default_template
+from app.services.font_service import get_common_fonts, get_installed_font_candidates
+from app.services.font_store import load_font_preferences, save_font_preferences
 from app.services.save_path_store import load_default_save_path, save_default_save_path
+from app.services.template_store import load_default_template, save_default_template
 from app.services.title_classifier import classify_paragraphs
+
+
+class FontSelectionDialog(QDialog):
+    def __init__(
+        self,
+        title: str,
+        description: str,
+        options: list[str],
+        parent: QWidget | None = None,
+        *,
+        multi_select: bool = True,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.resize(360, 440)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        description_label = QLabel(description)
+        description_label.setWordWrap(True)
+        description_label.setObjectName("mutedText")
+
+        self.list_widget = QListWidget()
+        self.list_widget.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection
+            if multi_select
+            else QAbstractItemView.SelectionMode.SingleSelection
+        )
+        self.list_widget.addItems(options)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+
+        if not options:
+            self.list_widget.setEnabled(False)
+            ok_button = buttons.button(QDialogButtonBox.StandardButton.Ok)
+            if ok_button is not None:
+                ok_button.setEnabled(False)
+
+        layout.addWidget(description_label)
+        layout.addWidget(self.list_widget, 1)
+        layout.addWidget(buttons)
+
+    def selected_values(self) -> list[str]:
+        return [item.text().strip() for item in self.list_widget.selectedItems() if item.text().strip()]
 
 
 class MainWindow(QMainWindow):
@@ -47,6 +101,8 @@ class MainWindow(QMainWindow):
         self.default_template = load_default_template()
         self.default_save_path = self._normalize_save_directory(load_default_save_path())
         self.last_declined_default_save_path: str | None = None
+        self.custom_fonts, removed_fonts = load_font_preferences()
+        self.removed_fonts = set(removed_fonts)
         self.available_fonts = self._build_available_fonts()
         self.default_editor_text = self._build_default_editor_text()
 
@@ -61,16 +117,34 @@ class MainWindow(QMainWindow):
         self._refresh_statistics()
 
     def _build_available_fonts(self) -> list[str]:
-        fonts = list(get_common_fonts())
+        fonts = self._merge_unique_fonts(get_common_fonts(), self.custom_fonts)
+        fonts = [font_name for font_name in fonts if font_name not in self.removed_fonts]
+
         for font_name in (
             self.default_template.title.font_family,
             self.default_template.h1.font_family,
             self.default_template.h2.font_family,
             self.default_template.body.font_family,
         ):
-            if font_name not in fonts:
+            if font_name and font_name not in self.removed_fonts and font_name not in fonts:
                 fonts.append(font_name)
+
         return fonts
+
+    def _merge_unique_fonts(self, *font_groups: list[str]) -> list[str]:
+        merged: list[str] = []
+        for group in font_groups:
+            for font_name in group:
+                normalized = font_name.strip()
+                if normalized and normalized not in merged:
+                    merged.append(normalized)
+        return merged
+
+    def _save_font_preferences(self) -> None:
+        save_font_preferences(self.custom_fonts, sorted(self.removed_fonts))
+
+    def _get_style_font_combos(self) -> list[QComboBox]:
+        return [self.title_font_combo, self.h1_font_combo, self.h2_font_combo, self.body_font_combo]
 
     def _build_default_editor_text(self) -> str:
         return (
@@ -87,15 +161,12 @@ class MainWindow(QMainWindow):
     def _normalize_save_directory(self, value: str | None) -> str | None:
         if not value:
             return None
-
         normalized_value = value.strip()
         if not normalized_value:
             return None
-
         candidate = Path(normalized_value).expanduser()
         if candidate.suffix.lower() == ".docx":
             candidate = candidate.parent
-
         return str(candidate)
 
     def _resolve_initial_save_directory(self) -> str:
@@ -103,7 +174,6 @@ class MainWindow(QMainWindow):
             normalized = self._normalize_save_directory(candidate)
             if normalized:
                 return normalized
-
         return str(Path.cwd())
 
     def _build_ui(self) -> None:
@@ -115,7 +185,7 @@ class MainWindow(QMainWindow):
         root_layout.setContentsMargins(10, 10, 10, 10)
         root_layout.setSpacing(0)
 
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
         splitter.setHandleWidth(6)
         splitter.addWidget(self._build_editor_panel())
@@ -150,7 +220,7 @@ class MainWindow(QMainWindow):
         header_layout.addStretch(1)
 
         self.editor = QPlainTextEdit()
-        self.editor.setFrameShape(QFrame.NoFrame)
+        self.editor.setFrameShape(QFrame.Shape.NoFrame)
 
         footer_layout = QHBoxLayout()
         footer_layout.setSpacing(8)
@@ -177,11 +247,11 @@ class MainWindow(QMainWindow):
         panel_layout = QVBoxLayout(panel)
         panel_layout.setContentsMargins(0, 0, 0, 0)
         panel.setMinimumWidth(300)
-        panel.setMaximumWidth(340)
+        panel.setMaximumWidth(360)
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.NoFrame)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
 
         content = QWidget()
         content_layout = QVBoxLayout(content)
@@ -191,17 +261,32 @@ class MainWindow(QMainWindow):
         title = QLabel("参数设置")
         title.setObjectName("sectionTitle")
 
-        action_row = QHBoxLayout()
-        action_row.setSpacing(5)
+        action_grid = QGridLayout()
+        action_grid.setContentsMargins(0, 0, 0, 0)
+        action_grid.setHorizontalSpacing(4)
+        action_grid.setVerticalSpacing(4)
+
         self.restore_defaults_button = QPushButton("恢复默认参数")
         self.restore_defaults_button.setObjectName("actionButton")
-        self.restore_defaults_button.setFixedSize(84, 20)
         self.set_default_button = QPushButton("当前参数设为默认值")
         self.set_default_button.setObjectName("actionButton")
-        self.set_default_button.setFixedSize(114, 20)
-        action_row.addWidget(self.restore_defaults_button)
-        action_row.addWidget(self.set_default_button)
-        action_row.addStretch(1)
+        self.load_local_fonts_button = QPushButton("加载本地字体")
+        self.load_local_fonts_button.setObjectName("actionButton")
+        self.remove_fonts_button = QPushButton("删除字体")
+        self.remove_fonts_button.setObjectName("actionButton")
+
+        action_buttons = [
+            self.restore_defaults_button,
+            self.set_default_button,
+            self.load_local_fonts_button,
+            self.remove_fonts_button,
+        ]
+        for index, button in enumerate(action_buttons):
+            button.setFixedHeight(20)
+            button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            action_grid.addWidget(button, index // 2, index % 2)
+        action_grid.setColumnStretch(0, 1)
+        action_grid.setColumnStretch(1, 1)
 
         settings_card = QFrame()
         settings_card.setObjectName("softCard")
@@ -214,16 +299,16 @@ class MainWindow(QMainWindow):
         settings_layout.addWidget(self._build_text_style_section())
         settings_layout.addWidget(self._build_export_section())
 
-        self.contact_label = QLabel("\u5982\u6709\u95ee\u9898\u6216\u5efa\u8bae\u8bf7\u8054\u7cfbwoomytown@163.com")
+        self.contact_label = QLabel("如有问题或建议请联系woomytown@163.com")
         self.contact_label.setObjectName("footerHint")
         self.contact_label.setWordWrap(False)
-        self.contact_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.contact_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         content_layout.addWidget(title)
-        content_layout.addLayout(action_row)
+        content_layout.addLayout(action_grid)
         content_layout.addWidget(settings_card)
         content_layout.addStretch(1)
-        content_layout.addWidget(self.contact_label, 0, Qt.AlignRight | Qt.AlignBottom)
+        content_layout.addWidget(self.contact_label, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom)
 
         scroll_area.setWidget(content)
         panel_layout.addWidget(scroll_area)
@@ -256,27 +341,19 @@ class MainWindow(QMainWindow):
         layout.addLayout(grid)
         return section
 
-    def _add_margin_row(
-        self,
-        grid: QGridLayout,
-        row: int,
-        left_label: str,
-        left_spin: QSpinBox,
-        right_label: str,
-        right_spin: QSpinBox,
-    ) -> None:
+    def _add_margin_row(self, grid: QGridLayout, row: int, left_label: str, left_spin: QSpinBox, right_label: str, right_spin: QSpinBox) -> None:
         left_label_widget = QLabel(left_label)
         left_label_widget.setFixedWidth(40)
-        left_label_widget.setAlignment(Qt.AlignCenter)
+        left_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         left_unit_widget = QLabel("毫米")
         left_unit_widget.setFixedWidth(20)
-        left_unit_widget.setAlignment(Qt.AlignCenter)
+        left_unit_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         right_label_widget = QLabel(right_label)
         right_label_widget.setFixedWidth(40)
-        right_label_widget.setAlignment(Qt.AlignCenter)
+        right_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         right_unit_widget = QLabel("毫米")
         right_unit_widget.setFixedWidth(20)
-        right_unit_widget.setAlignment(Qt.AlignCenter)
+        right_unit_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         spacer = QWidget()
         spacer.setFixedWidth(18)
@@ -304,10 +381,10 @@ class MainWindow(QMainWindow):
         self.line_spacing_spin = self._create_spinbox(10, 80, "lineField")
         line_label = QLabel("固定行距")
         line_label.setFixedWidth(48)
-        line_label.setAlignment(Qt.AlignCenter)
+        line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         unit_label = QLabel("pt")
         unit_label.setFixedWidth(16)
-        unit_label.setAlignment(Qt.AlignCenter)
+        unit_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         row.addWidget(line_label)
         row.addWidget(self.line_spacing_spin)
         row.addWidget(unit_label)
@@ -344,7 +421,7 @@ class MainWindow(QMainWindow):
         self.save_path_edit.setPlaceholderText("请选择保存文件夹")
         self.save_path_edit.setFixedHeight(20)
         self.save_path_edit.setMaximumWidth(188)
-        self.save_path_edit.setAlignment(Qt.AlignCenter)
+        self.save_path_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.select_path_button = QPushButton("选择保存位置")
         self.select_path_button.setObjectName("pathButton")
@@ -380,27 +457,27 @@ class MainWindow(QMainWindow):
 
         font_label = QLabel("字体")
         font_label.setFixedWidth(24)
-        font_label.setAlignment(Qt.AlignCenter)
+        font_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         row.addWidget(font_label, 0, 0)
 
         font_combo = QComboBox()
         font_combo.setObjectName("fontField")
-        font_combo.setFixedSize(78, 20)
+        font_combo.setFixedSize(92, 20)
         self._configure_centered_combo(font_combo)
         row.addWidget(font_combo, 0, 1)
 
         size_label = QLabel("字号")
         size_label.setFixedWidth(24)
-        size_label.setAlignment(Qt.AlignCenter)
+        size_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         row.addWidget(size_label, 0, 2)
 
         size_combo = QComboBox()
         size_combo.setObjectName("sizeField")
-        size_combo.setFixedSize(36, 20)
+        size_combo.setFixedSize(40, 20)
         self._configure_centered_combo(size_combo)
         size_combo.addItems(list(HAO_TO_PT.keys()))
         for index in range(size_combo.count()):
-            size_combo.setItemData(index, Qt.AlignCenter, Qt.TextAlignmentRole)
+            size_combo.setItemData(index, Qt.AlignmentFlag.AlignCenter, Qt.ItemDataRole.TextAlignmentRole)
         row.addWidget(size_combo, 0, 3)
         row.setColumnStretch(4, 1)
 
@@ -414,49 +491,75 @@ class MainWindow(QMainWindow):
         spinbox.setObjectName(object_name)
         spinbox.setRange(minimum, maximum)
         spinbox.setFixedSize(36, 20)
-        spinbox.setAlignment(Qt.AlignCenter)
+        spinbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
         spinbox.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.UpDownArrows)
         return spinbox
 
     def _configure_centered_combo(self, combo: QComboBox) -> None:
         combo.setEditable(True)
         combo.lineEdit().setReadOnly(True)
-        combo.lineEdit().setAlignment(Qt.AlignCenter)
-        combo.lineEdit().setCursor(Qt.ArrowCursor)
+        combo.lineEdit().setAlignment(Qt.AlignmentFlag.AlignCenter)
+        combo.lineEdit().setCursor(Qt.CursorShape.ArrowCursor)
 
     def _bind_events(self) -> None:
         self.import_button.clicked.connect(self._import_file)
         self.clear_button.clicked.connect(self._clear_editor)
         self.restore_defaults_button.clicked.connect(self._restore_default_parameters)
         self.set_default_button.clicked.connect(self._set_current_as_default)
+        self.load_local_fonts_button.clicked.connect(self._load_local_fonts)
+        self.remove_fonts_button.clicked.connect(self._delete_fonts)
         self.select_path_button.clicked.connect(self._select_save_path)
         self.export_button.clicked.connect(self._export_document)
         self.editor.textChanged.connect(self._refresh_statistics)
 
     def _populate_style_font_combos(self, fonts: list[str]) -> None:
-        combos = [
-            self.title_font_combo,
-            self.h1_font_combo,
-            self.h2_font_combo,
-            self.body_font_combo,
-        ]
         defaults = [
             self.default_template.title.font_family,
             self.default_template.h1.font_family,
             self.default_template.h2.font_family,
             self.default_template.body.font_family,
         ]
-
-        for combo, default_value in zip(combos, defaults):
+        for combo, default_value in zip(self._get_style_font_combos(), defaults):
             combo.blockSignals(True)
             combo.clear()
             combo.addItems(fonts)
             for index in range(combo.count()):
-                combo.setItemData(index, Qt.AlignCenter, Qt.TextAlignmentRole)
+                combo.setItemData(index, Qt.AlignmentFlag.AlignCenter, Qt.ItemDataRole.TextAlignmentRole)
             if default_value in fonts:
                 combo.setCurrentText(default_value)
             elif fonts:
                 combo.setCurrentIndex(0)
+            combo.blockSignals(False)
+
+    def _refresh_font_combos(self, preferred_values: list[str] | None = None) -> None:
+        if preferred_values is None:
+            preferred_values = [combo.currentText().strip() for combo in self._get_style_font_combos()]
+
+        self.available_fonts = self._build_available_fonts()
+        fallback_values = [
+            self.default_template.title.font_family,
+            self.default_template.h1.font_family,
+            self.default_template.h2.font_family,
+            self.default_template.body.font_family,
+        ]
+
+        for combo, preferred_value, fallback_value in zip(self._get_style_font_combos(), preferred_values, fallback_values):
+            combo.blockSignals(True)
+            combo.clear()
+            combo.addItems(self.available_fonts)
+            for index in range(combo.count()):
+                combo.setItemData(index, Qt.AlignmentFlag.AlignCenter, Qt.ItemDataRole.TextAlignmentRole)
+
+            selected_value = None
+            if preferred_value in self.available_fonts:
+                selected_value = preferred_value
+            elif fallback_value in self.available_fonts:
+                selected_value = fallback_value
+            elif self.available_fonts:
+                selected_value = self.available_fonts[0]
+
+            if selected_value:
+                combo.setCurrentText(selected_value)
             combo.blockSignals(False)
 
     def _load_template_into_form(self, template: TemplateConfig) -> None:
@@ -465,12 +568,14 @@ class MainWindow(QMainWindow):
         self.left_margin_spin.setValue(template.margins_mm.left)
         self.right_margin_spin.setValue(template.margins_mm.right)
         self.line_spacing_spin.setValue(template.line_spacing_pt)
-
-        self.title_font_combo.setCurrentText(template.title.font_family)
-        self.h1_font_combo.setCurrentText(template.h1.font_family)
-        self.h2_font_combo.setCurrentText(template.h2.font_family)
-        self.body_font_combo.setCurrentText(template.body.font_family)
-
+        if template.title.font_family in self.available_fonts:
+            self.title_font_combo.setCurrentText(template.title.font_family)
+        if template.h1.font_family in self.available_fonts:
+            self.h1_font_combo.setCurrentText(template.h1.font_family)
+        if template.h2.font_family in self.available_fonts:
+            self.h2_font_combo.setCurrentText(template.h2.font_family)
+        if template.body.font_family in self.available_fonts:
+            self.body_font_combo.setCurrentText(template.body.font_family)
         self.title_size_combo.setCurrentText(template.title.font_size_hao)
         self.h1_size_combo.setCurrentText(template.h1.font_size_hao)
         self.h2_size_combo.setCurrentText(template.h2.font_size_hao)
@@ -489,31 +594,20 @@ class MainWindow(QMainWindow):
         self.editor.setProperty("editorState", state)
         self.editor.style().unpolish(self.editor)
         self.editor.style().polish(self.editor)
-
         palette = self.editor.palette()
-        if state == "default":
-            palette.setColor(QPalette.ColorRole.Text, QColor("#A8B5C7"))
-        else:
-            palette.setColor(QPalette.ColorRole.Text, QColor("#163056"))
+        palette.setColor(QPalette.ColorRole.Text, QColor("#A8B5C7" if state == "default" else "#163056"))
         self.editor.setPalette(palette)
         self.editor.viewport().update()
 
     def _import_file(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "选择文档",
-            "",
-            "支持的文件 (*.docx *.txt)",
-        )
+        file_path, _ = QFileDialog.getOpenFileName(self, "选择文档", "", "支持的文件 (*.docx *.txt)")
         if not file_path:
             return
-
         try:
             text, file_name = import_text_document(file_path)
         except Exception as exc:
             QMessageBox.critical(self, "导入失败", str(exc))
             return
-
         self.current_file_name = file_name
         self.editor.setPlainText(text)
         self._update_editor_visual_state()
@@ -522,15 +616,9 @@ class MainWindow(QMainWindow):
     def _clear_editor(self) -> None:
         if self._is_default_editor_content(self.editor.toPlainText()):
             return
-
-        result = QMessageBox.question(
-            self,
-            "清空内容",
-            "确定要清空当前编辑内容吗？",
-        )
-        if result != QMessageBox.Yes:
+        result = QMessageBox.question(self, "清空内容", "确定要清空当前编辑内容吗？")
+        if result != QMessageBox.StandardButton.Yes:
             return
-
         self.current_file_name = "未导入文件"
         self._reset_editor_to_default_text()
         self._update_editor_visual_state()
@@ -539,8 +627,12 @@ class MainWindow(QMainWindow):
 
     def _restore_default_parameters(self) -> None:
         self.default_template = load_default_template()
-        self.available_fonts = self._build_available_fonts()
-        self._populate_style_font_combos(self.available_fonts)
+        self._refresh_font_combos([
+            self.default_template.title.font_family,
+            self.default_template.h1.font_family,
+            self.default_template.h2.font_family,
+            self.default_template.body.font_family,
+        ])
         self._load_template_into_form(self.default_template)
         self.statusBar().showMessage("已恢复默认参数。")
 
@@ -551,20 +643,85 @@ class MainWindow(QMainWindow):
         except OSError as exc:
             QMessageBox.critical(self, "保存失败", f"默认参数保存失败：{exc}")
             return
-
-        self.available_fonts = self._build_available_fonts()
-        self._populate_style_font_combos(self.available_fonts)
+        self._refresh_font_combos()
         self.statusBar().showMessage(f"默认参数已保存：{config_path}")
         QMessageBox.information(self, "保存成功", "当前参数已设为默认值，下次打开软件会自动加载。")
+
+    def _load_local_fonts(self) -> None:
+        options = get_installed_font_candidates()
+        dialog = FontSelectionDialog(
+            "加载本地字体",
+            "字体来源：C:\\Windows\\Fonts。\n中文命名字体优先显示，可多选加载到本软件的字体下拉菜单中。",
+            options,
+            self,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        selected_fonts = dialog.selected_values()
+        if not selected_fonts:
+            return
+
+        common_fonts = get_common_fonts()
+        changed = False
+        for font_name in selected_fonts:
+            if font_name in self.removed_fonts:
+                self.removed_fonts.remove(font_name)
+                changed = True
+            if font_name not in common_fonts and font_name not in self.custom_fonts:
+                self.custom_fonts.append(font_name)
+                changed = True
+
+        if not changed:
+            QMessageBox.information(self, "无需更新", "所选字体已经在本软件的字体列表中。")
+            return
+
+        self._save_font_preferences()
+        self._refresh_font_combos()
+        self.statusBar().showMessage(f"已加载 {len(selected_fonts)} 个本地字体。")
+
+    def _delete_fonts(self) -> None:
+        dialog = FontSelectionDialog(
+            "删除字体",
+            "请选择要从本软件字体下拉菜单中删除的字体名称，可多选。",
+            list(self.available_fonts),
+            self,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        selected_fonts = dialog.selected_values()
+        if not selected_fonts:
+            return
+
+        remaining_fonts = [font_name for font_name in self.available_fonts if font_name not in selected_fonts]
+        if not remaining_fonts:
+            QMessageBox.warning(self, "无法删除", "至少需要保留一个字体选项。")
+            return
+
+        result = QMessageBox.question(
+            self,
+            "确认删除",
+            f"确定要删除已选的 {len(selected_fonts)} 个字体选项吗？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if result != QMessageBox.StandardButton.Yes:
+            return
+
+        for font_name in selected_fonts:
+            if font_name in self.custom_fonts:
+                self.custom_fonts.remove(font_name)
+            self.removed_fonts.add(font_name)
+
+        self._save_font_preferences()
+        self._refresh_font_combos()
+        self.statusBar().showMessage(f"已删除 {len(selected_fonts)} 个字体选项。")
 
     def _maybe_ask_set_default_save_path(self, selected_path: str) -> None:
         normalized_path = self._normalize_save_directory(selected_path)
         if not normalized_path:
             return
-
         if self.default_save_path and normalized_path == self.default_save_path:
             return
-
         if self.last_declined_default_save_path and normalized_path == self.last_declined_default_save_path:
             return
 
@@ -572,49 +729,39 @@ class MainWindow(QMainWindow):
             self,
             "设置默认保存路径",
             "是否把当前路径设置为默认保存路径？",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.Yes,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
         )
-
-        if result == QMessageBox.Yes:
+        if result == QMessageBox.StandardButton.Yes:
             try:
                 config_path = save_default_save_path(normalized_path)
             except OSError as exc:
                 QMessageBox.critical(self, "保存失败", f"默认保存路径保存失败：{exc}")
                 return
-
             self.default_save_path = normalized_path
             self.last_declined_default_save_path = None
             self.statusBar().showMessage(f"默认保存路径已更新：{config_path}")
             return
-
         self.last_declined_default_save_path = normalized_path
 
     def _select_save_path(self) -> None:
-        directory = QFileDialog.getExistingDirectory(
-            self,
-            "选择保存文件夹",
-            self._resolve_initial_save_directory(),
-        )
+        directory = QFileDialog.getExistingDirectory(self, "选择保存文件夹", self._resolve_initial_save_directory())
         if not directory:
             return
-
         normalized_directory = self._normalize_save_directory(directory)
         if not normalized_directory:
             return
-
         self.save_path_edit.setText(normalized_directory)
         self._maybe_ask_set_default_save_path(normalized_directory)
 
     def _show_export_success_dialog(self, exported_path: str) -> None:
         dialog = QMessageBox(self)
         dialog.setWindowTitle("导出成功")
-        dialog.setIcon(QMessageBox.Information)
+        dialog.setIcon(QMessageBox.Icon.Information)
         dialog.setText(f"文档已生成：\n{exported_path}")
-        open_button = dialog.addButton("打开文档", QMessageBox.ActionRole)
-        reveal_button = dialog.addButton("在文件夹中显示", QMessageBox.ActionRole)
+        open_button = dialog.addButton("打开文档", QMessageBox.ButtonRole.ActionRole)
+        reveal_button = dialog.addButton("在文件夹中显示", QMessageBox.ButtonRole.ActionRole)
         dialog.exec()
-
         clicked_button = dialog.clickedButton()
         if clicked_button == open_button:
             self._open_document(exported_path)
@@ -650,22 +797,10 @@ class MainWindow(QMainWindow):
                 right=self.right_margin_spin.value(),
             ),
             line_spacing_pt=self.line_spacing_spin.value(),
-            title=TextStyleConfig(
-                font_family=self.title_font_combo.currentText(),
-                font_size_hao=self.title_size_combo.currentText(),
-            ),
-            h1=TextStyleConfig(
-                font_family=self.h1_font_combo.currentText(),
-                font_size_hao=self.h1_size_combo.currentText(),
-            ),
-            h2=TextStyleConfig(
-                font_family=self.h2_font_combo.currentText(),
-                font_size_hao=self.h2_size_combo.currentText(),
-            ),
-            body=TextStyleConfig(
-                font_family=self.body_font_combo.currentText(),
-                font_size_hao=self.body_size_combo.currentText(),
-            ),
+            title=TextStyleConfig(font_family=self.title_font_combo.currentText(), font_size_hao=self.title_size_combo.currentText()),
+            h1=TextStyleConfig(font_family=self.h1_font_combo.currentText(), font_size_hao=self.h1_size_combo.currentText()),
+            h2=TextStyleConfig(font_family=self.h2_font_combo.currentText(), font_size_hao=self.h2_size_combo.currentText()),
+            body=TextStyleConfig(font_family=self.body_font_combo.currentText(), font_size_hao=self.body_size_combo.currentText()),
         )
 
     def _export_document(self) -> None:
@@ -673,23 +808,19 @@ class MainWindow(QMainWindow):
         if not text or self._is_default_editor_content(text):
             QMessageBox.information(self, "缺少内容", "请先导入文档或在编辑区输入正式文字。")
             return
-
         save_directory = self._normalize_save_directory(self.save_path_edit.text().strip())
         if not save_directory:
             self._select_save_path()
             save_directory = self._normalize_save_directory(self.save_path_edit.text().strip())
             if not save_directory:
                 return
-
         self.save_path_edit.setText(save_directory)
         self._maybe_ask_set_default_save_path(save_directory)
-
         try:
             exported_path = export_docx_document(text, self._build_template_from_form(), save_directory)
         except Exception as exc:
             QMessageBox.critical(self, "导出失败", str(exc))
             return
-
         self.statusBar().showMessage(f"导出成功：{exported_path}")
         self._show_export_success_dialog(exported_path)
 
@@ -697,21 +828,17 @@ class MainWindow(QMainWindow):
         self._update_editor_visual_state()
         text = self.editor.toPlainText()
         stripped_text = text.strip()
-
         if not stripped_text or self._is_default_editor_content(stripped_text):
             self.paragraph_count_label.setText("段落数：0")
             self.char_count_label.setText("字数：0")
             self.classifier_status_label.setText("识别状态：等待内容")
             return
-
         paragraphs = classify_paragraphs(stripped_text)
         self.paragraph_count_label.setText(f"段落数：{len(paragraphs)}")
         self.char_count_label.setText(f"字数：{len(''.join(part for part in text.split()))}")
-
         counts = {"title": 0, "h1": 0, "h2": 0, "body": 0}
         for item in paragraphs:
             counts[item["type"]] += 1
-
         self.classifier_status_label.setText(
             f"识别状态：标题 {counts['title']}，一级 {counts['h1']}，二级 {counts['h2']}，正文 {counts['body']}"
         )

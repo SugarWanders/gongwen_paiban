@@ -1,0 +1,7 @@
+﻿__pycache__/
+*.py[cod]
+*.pyo
+build/
+dist/
+config/default_template.json
+config/default_save_path.json

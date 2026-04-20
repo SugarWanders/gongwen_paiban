@@ -2,15 +2,31 @@
 from pathlib import Path
 
 from PySide6.QtCore import QTimer
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication
 
 from app.ui.main_window import MainWindow
 from app.ui.styles import build_stylesheet
 
 
-WINDOW_BLUE = "#5AA7FF"
-WINDOW_TEXT = "#FFFFFF"
+WINDOW_BLUE = "#D7F95A"
+WINDOW_TEXT = "#121712"
+
+WINDOW_APP_ID = "gongwen.paiban.zhushou.v1_0.icon20260420r2"
+
+
+def _apply_windows_app_id() -> None:
+    if sys.platform != "win32":
+        return
+
+    try:
+        import ctypes
+
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(WINDOW_APP_ID)
+    except Exception:
+        return
+
+
 
 
 def _apply_windows_title_bar_color(window) -> None:
@@ -58,13 +74,17 @@ def resource_path(name: str) -> Path:
 
 
 def main() -> int:
+    _apply_windows_app_id()
     app = QApplication(sys.argv)
     app.setApplicationName("公文排版助手")
-    app.setApplicationVersion("V1.0")
+    app.setApplicationVersion("V1.1")
     app.setStyle("Fusion")
+    app.setFont(QFont("\u65b9\u6b63\u5c0f\u6807\u5b8b\u7b80\u4f53", 10))
     app.setStyleSheet(build_stylesheet())
 
     icon_path = resource_path("icon.png")
+    if not icon_path.exists():
+        icon_path = resource_path("icon.ico")
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
 

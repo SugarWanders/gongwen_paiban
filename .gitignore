@@ -6,3 +6,4 @@ dist/
 config/default_template.json
 config/default_save_path.json
 config/font_preferences.json
+ui_preview_latest.png

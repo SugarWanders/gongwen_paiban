@@ -36,6 +36,14 @@ def save_default_save_path(default_path: str) -> Path:
     return config_path
 
 
+
+
+def clear_default_save_path() -> Path:
+    config_path = _get_config_path()
+    if config_path.exists():
+        config_path.unlink()
+    return config_path
+
 def _get_config_path() -> Path:
     if getattr(sys, "frozen", False):
         base_dir = Path(sys.executable).resolve().parent

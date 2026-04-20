@@ -1,4 +1,4 @@
-﻿name: Build Windows Portable EXE
+name: Build Windows Portable EXE
 
 on:
   push:
@@ -29,6 +29,6 @@ jobs:
       - name: Upload portable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 公文排版助手V1_0-windows-portable
-          path: dist/公文排版助手V1_0
+          name: 公文排版助手V1_1-windows-portable
+          path: dist/公文排版助手V1_1
           if-no-files-found: error

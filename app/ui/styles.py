@@ -16,9 +16,9 @@ def build_stylesheet() -> str:
     spin_down_arrow_uri = _asset_uri("down-arrow.svg")
     return f"""
     QWidget {{
-        background: #EFF5FF;
-        color: #18304F;
-        font-family: "SF Pro Display", "Segoe UI", "Microsoft YaHei UI";
+        background: #A6B1A3;
+        color: #151A15;
+        font-family: "\u65b9\u6b63\u5c0f\u6807\u5b8b\u7b80\u4f53", "\u65b9\u6b63\u5c0f\u6807\u5b8b_GBK", "FZYaSong", "Microsoft YaHei UI", "Segoe UI";
         font-size: 8pt;
     }}
 
@@ -27,132 +27,228 @@ def build_stylesheet() -> str:
     }}
 
     QMainWindow, #root {{
-        background: qlineargradient(
-            x1: 0, y1: 0, x2: 1, y2: 1,
-            stop: 0 #F8FBFF,
-            stop: 0.56 #EEF5FF,
-            stop: 1 #E4F0FF
-        );
+        background: #A6B1A3;
+    }}
+
+    QSplitter::handle {{
+        background: #A6B1A3;
+    }}
+
+    QAbstractScrollArea::corner {{
+        background: #A6B1A3;
+        border: none;
     }}
 
     #card {{
-        background: qlineargradient(
-            x1: 0, y1: 0, x2: 1, y2: 1,
-            stop: 0 #FFFFFF,
-            stop: 1 #F4F9FF
-        );
-        border: 1px solid #D5E3F6;
+        background: #F4F7F1;
+        border: 1px solid #CFD8CA;
         border-radius: 16px;
     }}
 
-    #softCard {{
-        background: #F7FBFF;
-        border: 1px solid #DCE9F8;
-        border-radius: 14px;
+    #cardContent {{
+        background: transparent;
+        border: none;
+    }}
+
+    #settingsPanelCard {{
+        background: #F4F7F1;
+        border: 1px solid #CFD8CA;
+        border-radius: 16px;
+    }}
+
+    QWidget#settingsContent {{
+        background: transparent;
+    }}
+
+    QFrame#styleGroup {{
+        background: transparent;
+    }}
+
+    #settingsContent QLabel,
+    #settingsContent QPushButton,
+    #settingsContent QLineEdit,
+    #settingsContent QComboBox,
+    #settingsContent QSpinBox {{
+        font-size: 7pt;
+    }}
+
+    #settingsContent QLabel#sectionTitle {{
+        font-size: 8.5pt;
+    }}
+
+    #settingsContent #styleBlock QLabel,
+    #settingsContent #styleBlock QLineEdit,
+    #settingsContent #styleBlock QComboBox,
+    #settingsContent #styleBlock QSpinBox,
+    #settingsContent #styleBlock QPushButton {{
+        font-size: 6pt;
+    }}
+
+    #settingsContent #styleBlock QLabel#subSectionTitle {{
+        font-size: 7.5pt;
+        padding-left: 26px;
+    }}
+
+    #settingsContainer {{
+        background: transparent;
+        border: none;
     }}
 
     #styleBlock {{
+        background: #CFE89A;
+        border: 1px solid #B7D97A;
+        border-radius: 10px;
+    }}
+
+    #styleBlock QLabel,
+    #styleBlock QLineEdit,
+    #styleBlock QComboBox,
+    #styleBlock QSpinBox,
+    #styleBlock QPushButton {{
+        font-size: 7pt;
+    }}
+
+    #styleBlock QLabel#subSectionTitle {{
+        font-size: 8.5pt;
+    }}
+
+    #styleDivider {{
         background: transparent;
         border: none;
-        border-radius: 0;
+        min-height: 0px;
+        max-height: 0px;
     }}
 
     QLabel#sectionTitle {{
         font-size: 9.5pt;
         font-weight: 700;
-        color: #143257;
+        color: #141914;
         padding: 0 0 1px 0;
     }}
 
     QLabel#subSectionTitle {{
         font-size: 9.5pt;
         font-weight: 700;
-        color: #16355B;
+        color: #1B231A;
         padding: 0;
     }}
 
     QLabel#mutedText {{
-        color: #7E91AA;
+        color: #758173;
         font-size: 7.5pt;
     }}
 
-    QLabel#footerHint {{
-        color: #A8B5C7;
-        font-size: 8.5pt;
-        padding: 0 4px 0 4px;
-        min-height: 12px;
-    }}
-
     QPushButton {{
-        background: qlineargradient(
-            x1: 0, y1: 0, x2: 1, y2: 1,
-            stop: 0 #FFFFFF,
-            stop: 1 #F2F8FF
-        );
-        color: #153254;
-        border: 1px solid #C8DBF1;
+        background: #F8FBF5;
+        color: #1A2318;
+        border: 1px solid #BECBB7;
         border-radius: 10px;
-        padding: 1px 6px;
+        padding: 0 10px;
         font-weight: 600;
-        min-height: 12px;
+        min-height: 20px;
+        max-height: 20px;
         text-align: center;
     }}
 
     QPushButton:hover {{
-        background: #F7FBFF;
-        border-color: #9DBDE6;
+        background: #F1F6EB;
+        border-color: #AEBFA4;
     }}
 
     QPushButton:pressed {{
-        background: #E8F2FF;
-    }}
-
-    QPushButton#primaryButton:pressed {{
-        background: #5AA7FF;
-        border: 1px solid #5AA7FF;
+        background: #E6EEDC;
     }}
 
     QPushButton#toolButton {{
         min-width: 52px;
         max-width: 52px;
-        min-height: 20px;
-        max-height: 20px;
     }}
 
     QPushButton#actionButton {{
         min-height: 20px;
         max-height: 20px;
+        font-size: 8pt;
     }}
 
     QPushButton#pathButton {{
-        min-width: 76px;
-        max-width: 76px;
-        min-height: 20px;
-        max-height: 20px;
+        min-width: 60px;
+        max-width: 60px;
+    }}
+
+    QPushButton#toolButton, QPushButton#actionButton, QPushButton#pathButton {{
+        background: #F8FBF5;
+        color: #1A2318;
+        border: 1px solid #BECBB7;
+        border-radius: 10px;
+        font-weight: 600;
+    }}
+
+    QPushButton#toolButton:hover, QPushButton#actionButton:hover, QPushButton#pathButton:hover {{
+        background: #F1F6EB;
+        border-color: #AEBFA4;
     }}
 
     QPushButton#primaryButton {{
-        background: #5AA7FF;
+        background: #000000;
         color: #FFFFFF;
-        border: 1px solid #5AA7FF;
-        min-height: 20px;
-        max-height: 20px;
+        border: 1px solid #000000;
+        font-weight: 700;
     }}
 
     QPushButton#primaryButton:hover {{
-        background: #5AA7FF;
-        border: 1px solid #5AA7FF;
+        background: #000000;
+        color: #FFFFFF;
+        border: 1px solid #000000;
+    }}
+
+    QPushButton#primaryButton:pressed {{
+        background: #000000;
+        color: #FFFFFF;
+        border: 1px solid #000000;
+    }}
+
+    QMessageBox, QDialog {{
+        background: #FFFFFF;
+        color: #151A15;
+    }}
+
+    QMessageBox QLabel, QDialog QLabel {{
+        background: transparent;
+        color: #151A15;
+    }}
+
+    QMessageBox QPushButton, QDialog QPushButton {{
+        background: #FFFFFF;
+        color: #151A15;
+        border: 1px solid #D7F95A;
+        border-radius: 10px;
+        padding: 0 10px;
+        min-height: 20px;
+        max-height: 20px;
+        font-weight: 600;
+    }}
+
+    QMessageBox QPushButton:hover, QDialog QPushButton:hover {{
+        background: #D7F95A;
+        color: #151A15;
+        border: 1px solid #D7F95A;
+    }}
+
+    QMessageBox QPushButton:pressed, QDialog QPushButton:pressed {{
+        background: #D7F95A;
+        color: #151A15;
+        border: 1px solid #D7F95A;
     }}
 
     QPlainTextEdit, QLineEdit, QComboBox, QSpinBox {{
-        background: #FFFFFF;
-        border: 1px solid #D1E0F3;
+        background: #FCFDFB;
+        border: 1px solid #C5D0BF;
         border-radius: 10px;
         padding: 1px 6px;
-        selection-background-color: #C7E0FF;
-        selection-color: #173252;
-        color: #18304F;
-        min-height: 12px;
+        selection-background-color: #D7F95A;
+        selection-color: #131713;
+        color: #1B2219;
+        min-height: 20px;
     }}
 
     QLineEdit, QSpinBox {{
@@ -164,12 +260,12 @@ def build_stylesheet() -> str:
     }}
 
     QPlainTextEdit:focus, QLineEdit:focus, QComboBox:focus, QSpinBox:focus {{
-        border: 1px solid #6EAFFF;
+        border: 1px solid #AFC861;
         background: #FFFFFF;
     }}
 
     QPlainTextEdit {{
-        background: #FCFEFF;
+        background: #FBFDF9;
         font-size: 9pt;
         line-height: 1.55;
         border-radius: 14px;
@@ -177,11 +273,11 @@ def build_stylesheet() -> str:
     }}
 
     QPlainTextEdit[editorState="default"] {{
-        color: #A8B5C7;
+        color: #A6B0A3;
     }}
 
     QPlainTextEdit[editorState="normal"] {{
-        color: #163056;
+        color: #1B2219;
     }}
 
     QLineEdit#pathField {{
@@ -190,24 +286,75 @@ def build_stylesheet() -> str:
     }}
 
     QComboBox#fontField {{
-        min-width: 92px;
-        max-width: 92px;
+        min-width: 78px;
+        max-width: 78px;
         min-height: 20px;
         max-height: 20px;
+        padding: 0 16px 0 16px;
     }}
 
     QComboBox#sizeField {{
-        min-width: 40px;
-        max-width: 40px;
+        min-width: 30px;
+        max-width: 30px;
+        min-height: 20px;
+        max-height: 20px;
+        padding: 0 0px 0 10px;
+        font-size: 6pt;
+    }}
+
+    QComboBox#sizeField::drop-down {{
+        width: 10px;
+    }}
+
+    QWidget#marginField, QWidget#lineField {{
+        background: #FCFDFB;
+        border: 1px solid #C5D0BF;
+        border-radius: 10px;
+        min-width: 45px;
+        max-width: 45px;
+        min-height: 22px;
+        max-height: 22px;
+    }}
+
+    QLineEdit#spinValue {{
+        background: transparent;
+        border: none;
+        color: #1B2219;
+        padding: 0;
         min-height: 20px;
         max-height: 20px;
     }}
 
-    QSpinBox#marginField, QSpinBox#lineField {{
-        min-width: 36px;
-        max-width: 36px;
-        min-height: 20px;
-        max-height: 20px;
+    QWidget#spinButtonBox {{
+        background: transparent;
+        border: none;
+    }}
+
+    QToolButton#spinUpButton,
+    QToolButton#spinDownButton {{
+        background: transparent;
+        border: none;
+        border-left: 1px solid #C5D0BF;
+        padding: 0;
+        margin: 0;
+        min-width: 13px;
+        max-width: 13px;
+        min-height: 10px;
+        max-height: 10px;
+    }}
+
+    QToolButton#spinUpButton {{
+        border-bottom: 1px solid #DCE5D7;
+        border-top-right-radius: 10px;
+    }}
+
+    QToolButton#spinDownButton {{
+        border-bottom-right-radius: 10px;
+    }}
+
+    QToolButton#spinUpButton:hover,
+    QToolButton#spinDownButton:hover {{
+        background: #F0F6E9;
     }}
 
     QComboBox::drop-down {{
@@ -224,59 +371,29 @@ def build_stylesheet() -> str:
         height: 5px;
     }}
 
-    QSpinBox::up-button, QSpinBox::down-button {{
-        subcontrol-origin: border;
-        width: 13px;
-        background: transparent;
-        border: none;
-    }}
 
-    QSpinBox::up-button {{
-        subcontrol-position: top right;
-        border-left: 1px solid #D1E0F3;
-        border-bottom: 1px solid #E2ECF8;
-        border-top-right-radius: 10px;
-    }}
 
-    QSpinBox::down-button {{
-        subcontrol-position: bottom right;
-        border-left: 1px solid #D1E0F3;
-        border-bottom-right-radius: 10px;
-    }}
 
-    QSpinBox::up-arrow {{
-        image: url("{spin_up_arrow_uri}");
-        width: 9px;
-        height: 5px;
-    }}
 
-    QSpinBox::down-arrow {{
-        image: url("{spin_down_arrow_uri}");
-        width: 9px;
-        height: 5px;
-    }}
 
-    QSpinBox::up-button:hover, QSpinBox::down-button:hover {{
-        background: #F5FAFF;
-    }}
 
     QComboBox QAbstractItemView {{
-        border: 1px solid #D1E0F3;
+        border: 1px solid #C5D0BF;
         background: #FFFFFF;
-        color: #18304F;
-        selection-background-color: #E8F2FF;
-        selection-color: #18304F;
+        color: #171D16;
+        selection-background-color: #D7F95A;
+        selection-color: #171D16;
         outline: 0;
     }}
 
     QComboBox QAbstractItemView::item:selected {{
-        color: #18304F;
-        background: #E8F2FF;
+        color: #171D16;
+        background: #D7F95A;
     }}
 
     QComboBox QAbstractItemView::item:hover {{
-        color: #18304F;
-        background: #F2F8FF;
+        color: #171D16;
+        background: #ECF6CC;
     }}
 
     QScrollArea {{
@@ -284,9 +401,47 @@ def build_stylesheet() -> str:
         background: transparent;
     }}
 
-    QStatusBar {{
+    QScrollArea > QWidget > QWidget {{
         background: transparent;
-        color: #7289A6;
+    }}
+
+    QAbstractScrollArea::corner {{
+        background: #A6B1A3;
+        border: none;
+    }}
+
+    QStatusBar {{
+        background: #A6B1A3;
+        color: transparent;
         font-size: 7.5pt;
+        border: none;
+        min-height: 20px;
+        max-height: 20px;
+    }}
+
+    QStatusBar::item {{
+        border: none;
+    }}
+
+    QStatusBar QLabel#statusMessage,
+    QStatusBar QLabel#statusContact {{
+        color: #758173;
+        font-size: 7.5pt;
+        min-height: 18px;
+        max-height: 18px;
+    }}
+
+    QStatusBar QLabel#statusMessage {{
+        padding: 0 0 0 11px;
+        qproperty-alignment: AlignVCenter | AlignLeft;
+    }}
+
+    QStatusBar QLabel#statusContact {{
+        padding: 0 19px 0 4px;
+        qproperty-alignment: AlignVCenter | AlignRight;
     }}
     """
+
+
+
+

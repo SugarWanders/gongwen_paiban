@@ -4,7 +4,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QEvent, QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QIntValidator, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -134,6 +134,23 @@ class AlignedSpinBox(QWidget):
         self.setValue(parsed)
 
 
+class ClickableComboBox(QComboBox):
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.showPopup()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def eventFilter(self, watched, event):
+        if watched is self.lineEdit() and event.type() == QEvent.Type.MouseButtonPress:
+            if event.button() == Qt.MouseButton.LeftButton:
+                self.showPopup()
+                event.accept()
+                return True
+        return super().eventFilter(watched, event)
+
+
 class FontSelectionDialog(QDialog):
     def __init__(
         self,
@@ -185,7 +202,7 @@ class FontSelectionDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("公文排版助手 V1.1")
+        self.setWindowTitle("公文排版助手 V1.2")
         self.resize(830, 500)
         self.setMinimumSize(780, 500)
 
@@ -210,18 +227,7 @@ class MainWindow(QMainWindow):
 
     def _build_available_fonts(self) -> list[str]:
         fonts = self._merge_unique_fonts(get_common_fonts(), self.custom_fonts)
-        fonts = [font_name for font_name in fonts if font_name not in self.removed_fonts]
-
-        for font_name in (
-            self.default_template.title.font_family,
-            self.default_template.h1.font_family,
-            self.default_template.h2.font_family,
-            self.default_template.body.font_family,
-        ):
-            if font_name and font_name not in self.removed_fonts and font_name not in fonts:
-                fonts.append(font_name)
-
-        return fonts
+        return [font_name for font_name in fonts if font_name not in self.removed_fonts]
 
     def _merge_unique_fonts(self, *font_groups: list[str]) -> list[str]:
         merged: list[str] = []
@@ -577,7 +583,7 @@ class MainWindow(QMainWindow):
         font_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         row.addWidget(font_label, 0, 0)
 
-        font_combo = QComboBox()
+        font_combo = ClickableComboBox()
         font_combo.setObjectName("fontField")
         font_combo.setFixedSize(78, 20)
         self._configure_centered_combo(font_combo)
@@ -589,7 +595,7 @@ class MainWindow(QMainWindow):
         size_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         row.addWidget(size_label, 0, 3)
 
-        size_combo = QComboBox()
+        size_combo = ClickableComboBox()
         size_combo.setObjectName("sizeField")
         size_combo.setFixedSize(30, 20)
         self._configure_centered_combo(size_combo)
@@ -615,6 +621,8 @@ class MainWindow(QMainWindow):
         combo.lineEdit().setReadOnly(True)
         combo.lineEdit().setAlignment(Qt.AlignmentFlag.AlignCenter)
         combo.lineEdit().setCursor(Qt.CursorShape.ArrowCursor)
+        if isinstance(combo, ClickableComboBox):
+            combo.lineEdit().installEventFilter(combo)
 
     def _bind_events(self) -> None:
         self.import_button.clicked.connect(self._import_file)

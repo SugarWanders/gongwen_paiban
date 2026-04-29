@@ -27,6 +27,8 @@ def export_docx_document(text: str, template: TemplateConfig, save_directory: st
 
     document = Document()
     section = document.sections[0]
+    section.page_width = Mm(210)
+    section.page_height = Mm(297)
     section.top_margin = Mm(template.margins_mm.top)
     section.bottom_margin = Mm(template.margins_mm.bottom)
     section.left_margin = Mm(template.margins_mm.left)
@@ -65,7 +67,8 @@ def export_docx_document(text: str, template: TemplateConfig, save_directory: st
         elif paragraph_type == "h2":
             paragraph.paragraph_format.first_line_indent = h2_indent
 
-        run = paragraph.add_run(paragraph_data["text"])
+        paragraph_text = paragraph_data["text"].lstrip() if paragraph_type == "title" else paragraph_data["text"]
+        run = paragraph.add_run(paragraph_text)
         run.font.name = config.font_family
         run.font.size = Pt(hao_to_pt(config.font_size_hao))
 

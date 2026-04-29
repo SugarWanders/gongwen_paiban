@@ -120,14 +120,14 @@ def build_stylesheet() -> str:
     }}
 
     QLabel#sectionTitle {{
-        font-size: 9.5pt;
+        font-size: 8.5pt;
         font-weight: 700;
         color: #141914;
         padding: 0 0 1px 0;
     }}
 
     QLabel#subSectionTitle {{
-        font-size: 9.5pt;
+        font-size: 8.5pt;
         font-weight: 700;
         color: #1B231A;
         padding: 0;

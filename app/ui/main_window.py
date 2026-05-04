@@ -494,9 +494,9 @@ class MainWindow(QMainWindow):
         line_label = QLabel("固定行距")
         line_label.setFixedWidth(40)
         line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        unit_label = QLabel("pt")
+        unit_label = QLabel("磅")
         unit_label.setFixedWidth(18)
-        unit_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        unit_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         row.setColumnMinimumWidth(0, 40)
         row.setColumnMinimumWidth(1, 45)
@@ -732,6 +732,9 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "导入失败", str(exc))
             return
         self.current_file_name = file_name
+        imported_directory = self._normalize_save_directory(str(Path(file_path).resolve().parent))
+        if imported_directory:
+            self.save_path_edit.setText(imported_directory)
         self.editor.setPlainText(text)
         self._update_editor_visual_state()
         self._set_status_message(f"已导入文件：{file_name}")

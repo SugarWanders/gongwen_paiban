@@ -19,6 +19,7 @@ HAO_TO_PT = {
 }
 
 COMMON_FONTS = [
+    "黑体",
     "仿宋",
 ]
 
@@ -51,7 +52,7 @@ DEFAULT_TEMPLATE = TemplateConfig(
     margins_mm=MarginConfig(),
     line_spacing_pt=30,
     title=TextStyleConfig(font_family="仿宋", font_size_hao="二号"),
-    h1=TextStyleConfig(font_family="仿宋", font_size_hao="小二"),
+    h1=TextStyleConfig(font_family="黑体", font_size_hao="小二"),
     h2=TextStyleConfig(font_family="仿宋", font_size_hao="小二"),
     body=TextStyleConfig(font_family="仿宋", font_size_hao="小二"),
 )

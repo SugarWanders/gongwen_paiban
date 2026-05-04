@@ -202,7 +202,7 @@ class FontSelectionDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("公文排版助手 V1.2")
+        self.setWindowTitle("公文排版助手 V1.2.1")
         self.resize(830, 500)
         self.setMinimumSize(780, 500)
 

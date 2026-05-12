@@ -1,7 +1,7 @@
 ﻿# -*- mode: python ; coding: utf-8 -*-
 
 
-app_name = "公文排版助手V1_2_1"
+app_name = "公文排版助手V1_3"
 
 
 a = Analysis(

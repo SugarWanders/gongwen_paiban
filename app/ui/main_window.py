@@ -28,7 +28,6 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QSplitter,
     QSpinBox,
-    QStatusBar,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -45,6 +44,20 @@ from app.services.title_classifier import classify_paragraphs
 from app.ui.styles import _asset_uri
 
 
+WINDOW_SIZE = QSize(1030, 613)
+PANEL_HEIGHT = 572
+SETTINGS_PANEL_WIDTH = 390
+STATUS_FOOTER_HEIGHT = 31
+STATUS_TEXT_HEIGHT = 16
+STATUS_TEXT_TOP = 7
+STATUS_TEXT_SIDE_MARGIN = 7
+BODY_TITLE_LEFT_PADDING = 6
+BODY_TITLE_ZHENG_SHIFT = -4
+BODY_TITLE_WEN_SHIFT = -6
+LINE_UNIT_SHIFT = -6
+STATUS_MESSAGE_SHIFT = 3
+
+
 class AlignedSpinBox(QWidget):
     def __init__(self, minimum: int, maximum: int, object_name: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -54,7 +67,7 @@ class AlignedSpinBox(QWidget):
 
         self.setObjectName(object_name)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setFixedSize(45, 22)
+        self.setFixedSize(53, 29)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -70,7 +83,7 @@ class AlignedSpinBox(QWidget):
 
         button_box = QWidget()
         button_box.setObjectName("spinButtonBox")
-        button_box.setFixedWidth(13)
+        button_box.setFixedWidth(15)
 
         up_icon = QIcon(_asset_uri("up-arrow.svg"))
         down_icon = QIcon(_asset_uri("down-arrow.svg"))
@@ -82,17 +95,17 @@ class AlignedSpinBox(QWidget):
         self.up_button = QToolButton()
         self.up_button.setObjectName("spinUpButton")
         self.up_button.setIcon(up_icon)
-        self.up_button.setIconSize(QSize(9, 5))
+        self.up_button.setIconSize(QSize(10, 6))
         self.up_button.setAutoRaise(True)
-        self.up_button.setFixedSize(13, 10)
+        self.up_button.setFixedSize(15, 13)
         self.up_button.clicked.connect(self.step_up)
 
         self.down_button = QToolButton()
         self.down_button.setObjectName("spinDownButton")
         self.down_button.setIcon(down_icon)
-        self.down_button.setIconSize(QSize(9, 5))
+        self.down_button.setIconSize(QSize(10, 6))
         self.down_button.setAutoRaise(True)
-        self.down_button.setFixedSize(13, 10)
+        self.down_button.setFixedSize(15, 13)
         self.down_button.clicked.connect(self.step_down)
 
         button_layout.addWidget(self.up_button)
@@ -202,9 +215,10 @@ class FontSelectionDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("公文排版助手 V1.2.1")
-        self.resize(830, 500)
-        self.setMinimumSize(780, 500)
+        self.setWindowTitle("公文排版助手 V1.3")
+        self.resize(WINDOW_SIZE)
+        self.setMinimumSize(WINDOW_SIZE)
+        self.setMaximumHeight(WINDOW_SIZE.height())
 
         self.current_file_name = "未导入文件"
         self.default_template = load_default_template()
@@ -214,8 +228,10 @@ class MainWindow(QMainWindow):
         self.removed_fonts = set(removed_fonts)
         self.available_fonts = self._build_available_fonts()
         self.default_editor_text = self._build_default_editor_text()
+        self.style_section_labels: dict[str, QWidget] = {}
 
         self._build_ui()
+        self._apply_dpi_safe_window_constraints()
         self._populate_style_font_combos(self.available_fonts)
         self._load_template_into_form(self.default_template)
         self._reset_editor_to_default_text()
@@ -280,52 +296,153 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(root)
 
         root_layout = QVBoxLayout(root)
-        root_layout.setContentsMargins(10, 10, 10, 10)
+        root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
-        content_row = QHBoxLayout()
-        content_row.setContentsMargins(0, 0, 0, 0)
+        content_wrapper = QWidget()
+        content_wrapper.setObjectName("transparentSlot")
+        content_wrapper.setFixedHeight(PANEL_HEIGHT + 10)
+
+        content_row = QHBoxLayout(content_wrapper)
+        content_row.setContentsMargins(10, 10, 10, 0)
         content_row.setSpacing(6)
 
-        editor_panel = self._build_editor_panel()
-        settings_panel = self._build_settings_panel()
-        aligned_height = max(editor_panel.sizeHint().height(), settings_panel.sizeHint().height())
-        editor_panel.setFixedHeight(aligned_height)
-        settings_panel.setFixedHeight(aligned_height)
+        self.editor_panel = self._build_editor_panel()
+        self.settings_panel = self._build_settings_panel()
+        self.editor_panel.setFixedHeight(PANEL_HEIGHT)
+        self.settings_panel.setFixedHeight(PANEL_HEIGHT)
+        self._layout_body_title()
 
-        content_row.addWidget(editor_panel, 1, Qt.AlignmentFlag.AlignTop)
-        content_row.addWidget(settings_panel, 0, Qt.AlignmentFlag.AlignTop)
-        root_layout.addLayout(content_row)
+        content_row.addWidget(self.editor_panel, 1, Qt.AlignmentFlag.AlignTop)
+        content_row.addWidget(self.settings_panel, 0, Qt.AlignmentFlag.AlignTop)
+        root_layout.addWidget(content_wrapper)
 
-        status_bar = QStatusBar()
-        status_bar.setSizeGripEnabled(False)
-        if status_bar.layout() is not None:
-            status_bar.layout().setContentsMargins(0, 0, 0, 0)
-            status_bar.layout().setSpacing(0)
+        self.status_footer = QWidget()
+        self.status_footer.setObjectName("statusFooter")
+        self.status_footer.setFixedHeight(STATUS_FOOTER_HEIGHT)
 
-        self.status_message_label = QLabel("公文排版助手已就绪。")
+        self.status_message_label = QLabel("公文排版助手已就绪。", self.status_footer)
         self.status_message_label.setObjectName("statusMessage")
         self.status_message_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        status_bar.addWidget(self.status_message_label, 1)
+        self.status_message_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-        self.contact_label = QLabel("如有问题或建议请联系sugarwanders@163.com")
+        self.contact_label = QLabel("如有问题或建议请联系sugarwanders@163.com", self.status_footer)
         self.contact_label.setObjectName("statusContact")
         self.contact_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.contact_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
 
-        self.contact_container = QWidget()
-        self.contact_container.setObjectName("statusContactContainer")
-        contact_layout = QHBoxLayout(self.contact_container)
-        contact_layout.setContentsMargins(0, 0, 7, 0)
-        contact_layout.setSpacing(0)
-        contact_layout.addWidget(self.contact_label)
+        self.status_footer_layout = QHBoxLayout(self.status_footer)
+        self.status_footer_layout.setContentsMargins(
+            2 + STATUS_MESSAGE_SHIFT,
+            STATUS_TEXT_TOP,
+            STATUS_TEXT_SIDE_MARGIN,
+            STATUS_FOOTER_HEIGHT - STATUS_TEXT_TOP - STATUS_TEXT_HEIGHT,
+        )
+        self.status_footer_layout.setSpacing(6)
+        self.status_footer_layout.addWidget(self.status_message_label, 1, Qt.AlignmentFlag.AlignVCenter)
+        self.status_footer_layout.addWidget(self.contact_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        status_bar.addPermanentWidget(self.contact_container)
-        status_bar.addPermanentWidget(self.contact_container)
-        self.setStatusBar(status_bar)
+        root_layout.addWidget(self.status_footer)
+        root_layout.addStretch(1)
         self._set_status_message("公文排版助手已就绪。")
+        self._layout_status_footer()
 
     def _set_status_message(self, text: str) -> None:
         self.status_message_label.setText(text)
+        self._layout_status_footer()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._apply_precise_layout_offsets()
+
+    def _apply_precise_layout_offsets(self) -> None:
+        self._layout_status_footer()
+        self._layout_body_title()
+
+    def _apply_dpi_safe_window_constraints(self) -> None:
+        if not hasattr(self, "settings_panel"):
+            return
+
+        required_settings_width = max(SETTINGS_PANEL_WIDTH, self.settings_panel.sizeHint().width() + 2)
+        self.settings_panel.setMinimumWidth(required_settings_width)
+        self.settings_panel.setMaximumWidth(required_settings_width)
+
+        extra_width = max(0, required_settings_width - SETTINGS_PANEL_WIDTH)
+        safe_size = QSize(WINDOW_SIZE.width() + extra_width, WINDOW_SIZE.height())
+        self.setMinimumSize(safe_size)
+        self.setMaximumHeight(safe_size.height())
+        if self.width() < safe_size.width() or self.height() < safe_size.height():
+            self.resize(max(self.width(), safe_size.width()), max(self.height(), safe_size.height()))
+
+    def _layout_status_footer(self) -> None:
+        if not hasattr(self, "status_footer"):
+            return
+        text_height = max(
+            STATUS_TEXT_HEIGHT,
+            self.status_message_label.fontMetrics().height() + 2,
+            self.contact_label.fontMetrics().height() + 2,
+        )
+        text_height = min(self.status_footer.height(), text_height)
+        text_top = max(0, (self.status_footer.height() - text_height) // 2)
+        text_bottom = max(0, self.status_footer.height() - text_height - text_top)
+        contact_width = max(282, self.contact_label.sizeHint().width() + 4)
+        self.contact_label.setMinimumWidth(contact_width)
+        self.status_message_label.setMinimumHeight(text_height)
+        self.status_message_label.setMaximumHeight(text_height)
+        self.contact_label.setMinimumHeight(text_height)
+        self.contact_label.setMaximumHeight(text_height)
+        if hasattr(self, "status_footer_layout"):
+            self.status_footer_layout.setContentsMargins(
+                2 + STATUS_MESSAGE_SHIFT,
+                text_top,
+                STATUS_TEXT_SIDE_MARGIN,
+                text_bottom,
+            )
+
+    def _build_body_title_widget(self) -> QWidget:
+        title_widget = QWidget()
+        title_widget.setObjectName("transparentSlot")
+        title_widget.setFixedHeight(18)
+
+        self.body_title_zheng_label = QLabel("正", title_widget)
+        self.body_title_wen_label = QLabel("文", title_widget)
+        for label in (self.body_title_zheng_label, self.body_title_wen_label):
+            label.setObjectName("bodyTitleChar")
+            label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
+        return title_widget
+
+    def _layout_body_title(self) -> None:
+        h2_label = self.style_section_labels.get("二级标题")
+        body_title_widget = self.style_section_labels.get("正文")
+        if not h2_label or not body_title_widget:
+            return
+        if not hasattr(self, "body_title_zheng_label") or not hasattr(self, "body_title_wen_label"):
+            return
+
+        h2_top_left = h2_label.mapTo(self.settings_panel, h2_label.rect().topLeft())
+        body_top_left = body_title_widget.mapTo(self.settings_panel, body_title_widget.rect().topLeft())
+        metrics = h2_label.fontMetrics()
+        title_height = max(body_title_widget.height(), metrics.height())
+        h2_text_left = h2_top_left.x() + BODY_TITLE_LEFT_PADDING
+        zheng_x = h2_text_left + BODY_TITLE_ZHENG_SHIFT - body_top_left.x()
+        wen_x = h2_text_left + metrics.horizontalAdvance("二级标") + BODY_TITLE_WEN_SHIFT - body_top_left.x()
+        fallback_positions = (2, 45)
+
+        for index, (text, label, x) in enumerate(
+            (
+                ("正", self.body_title_zheng_label, zheng_x),
+                ("文", self.body_title_wen_label, wen_x),
+            )
+        ):
+            label_width = metrics.horizontalAdvance(text) + 8
+            safe_x = int(round(x))
+            if safe_x < 0 or safe_x + label_width > body_title_widget.width():
+                safe_x = fallback_positions[index]
+            label.setFixedSize(label_width, title_height)
+            label.move(safe_x, 0)
+            label.show()
+            label.raise_()
 
     def _build_editor_panel(self) -> QFrame:
         panel = QFrame()
@@ -333,7 +450,7 @@ class MainWindow(QMainWindow):
         panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setContentsMargins(12, 12, 12, 0)
         layout.setSpacing(2)
 
         header_layout = QHBoxLayout()
@@ -341,10 +458,10 @@ class MainWindow(QMainWindow):
 
         self.import_button = QPushButton("导入文件")
         self.import_button.setObjectName("toolButton")
-        self.import_button.setFixedSize(52, 20)
+        self.import_button.setFixedSize(82, 27)
         self.clear_button = QPushButton("清空内容")
         self.clear_button.setObjectName("toolButton")
-        self.clear_button.setFixedSize(52, 20)
+        self.clear_button.setFixedSize(82, 27)
 
         header_layout.addWidget(self.import_button)
         header_layout.addWidget(self.clear_button)
@@ -353,7 +470,11 @@ class MainWindow(QMainWindow):
         self.editor = QPlainTextEdit()
         self.editor.setFrameShape(QFrame.Shape.NoFrame)
 
-        footer_layout = QHBoxLayout()
+        footer_widget = QWidget()
+        footer_widget.setObjectName("transparentSlot")
+        footer_widget.setFixedHeight(31)
+        footer_layout = QHBoxLayout(footer_widget)
+        footer_layout.setContentsMargins(0, 7, 0, 8)
         footer_layout.setSpacing(8)
 
         self.paragraph_count_label = QLabel("段落数：0")
@@ -362,13 +483,15 @@ class MainWindow(QMainWindow):
 
         for label in (self.paragraph_count_label, self.char_count_label, self.classifier_status_label):
             label.setObjectName("mutedText")
+            label.setFixedHeight(16)
+            label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             footer_layout.addWidget(label)
 
         footer_layout.addStretch(1)
 
         layout.addLayout(header_layout)
         layout.addWidget(self.editor, 1)
-        layout.addLayout(footer_layout)
+        layout.addWidget(footer_widget)
         return panel
 
     def _build_settings_panel(self) -> QFrame:
@@ -377,10 +500,9 @@ class MainWindow(QMainWindow):
         panel.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         panel_layout = QVBoxLayout(panel)
-        panel_layout.setContentsMargins(12, 12, 12, 12)
-        panel_layout.setSpacing(4)
-        panel.setMinimumWidth(280)
-        panel.setMaximumWidth(280)
+        panel_layout.setContentsMargins(12, 12, 12, 5)
+        panel_layout.setSpacing(6)
+        panel.setMinimumWidth(SETTINGS_PANEL_WIDTH)
 
         action_grid = QGridLayout()
         action_grid.setContentsMargins(0, 0, 0, 0)
@@ -403,7 +525,7 @@ class MainWindow(QMainWindow):
             self.remove_fonts_button,
         ]
         for index, button in enumerate(action_buttons):
-            button.setFixedHeight(20)
+            button.setFixedHeight(27)
             button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             action_grid.addWidget(button, index // 2, index % 2)
         action_grid.setColumnStretch(0, 1)
@@ -417,7 +539,7 @@ class MainWindow(QMainWindow):
 
         self.export_button = QPushButton("生成 .docx")
         self.export_button.setObjectName("primaryButton")
-        self.export_button.setFixedHeight(20)
+        self.export_button.setFixedHeight(29)
         panel_layout.addWidget(self.export_button)
         return panel
 
@@ -439,7 +561,7 @@ class MainWindow(QMainWindow):
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(4)
-        grid.setVerticalSpacing(4)
+        grid.setVerticalSpacing(9)
 
         self._add_margin_row(grid, 0, "上边距", self.top_margin_spin, "下边距", self.bottom_margin_spin)
         self._add_margin_row(grid, 1, "左边距", self.left_margin_spin, "右边距", self.right_margin_spin)
@@ -450,26 +572,28 @@ class MainWindow(QMainWindow):
 
     def _add_margin_row(self, grid: QGridLayout, row: int, left_label: str, left_spin: QSpinBox, right_label: str, right_spin: QSpinBox) -> None:
         left_label_widget = QLabel(left_label)
-        left_label_widget.setFixedWidth(40)
+        left_label_widget.setFixedWidth(58)
         left_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         left_unit_widget = QLabel("毫米")
-        left_unit_widget.setFixedWidth(18)
+        left_unit_widget.setFixedWidth(52)
         left_unit_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         right_label_widget = QLabel(right_label)
-        right_label_widget.setFixedWidth(38)
+        right_label_widget.setFixedWidth(58)
         right_label_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
         right_unit_widget = QLabel("毫米")
-        right_unit_widget.setFixedWidth(18)
+        right_unit_widget.setFixedWidth(52)
         right_unit_widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        grid.setColumnMinimumWidth(1, 45)
-        grid.setColumnMinimumWidth(2, 18)
-        grid.setColumnMinimumWidth(5, 45)
-        grid.setColumnMinimumWidth(6, 18)
+        grid.setColumnMinimumWidth(0, 58)
+        grid.setColumnMinimumWidth(1, 53)
+        grid.setColumnMinimumWidth(2, 52)
         grid.addWidget(left_label_widget, row, 0)
         grid.addWidget(left_spin, row, 1)
         grid.addWidget(left_unit_widget, row, 2)
-        grid.setColumnMinimumWidth(3, 12)
+        grid.setColumnMinimumWidth(3, 6)
+        grid.setColumnMinimumWidth(4, 58)
+        grid.setColumnMinimumWidth(5, 53)
+        grid.setColumnMinimumWidth(6, 52)
         grid.addWidget(right_label_widget, row, 4)
         grid.addWidget(right_spin, row, 5)
         grid.addWidget(right_unit_widget, row, 6)
@@ -492,23 +616,28 @@ class MainWindow(QMainWindow):
         row.setVerticalSpacing(0)
 
         line_label = QLabel("固定行距")
-        line_label.setFixedWidth(40)
+        line_label.setFixedWidth(72)
         line_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        unit_label = QLabel("磅")
-        unit_label.setFixedWidth(18)
+        unit_slot = QWidget()
+        unit_slot.setObjectName("transparentSlot")
+        unit_slot.setFixedSize(40, 29)
+        unit_label = QLabel("磅", unit_slot)
+        unit_label.setFixedSize(40, 29)
+        unit_label.move(LINE_UNIT_SHIFT, -2)
         unit_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.line_spacing_unit_label = unit_label
 
-        row.setColumnMinimumWidth(0, 40)
-        row.setColumnMinimumWidth(1, 45)
-        row.setColumnMinimumWidth(2, 18)
-        row.setColumnMinimumWidth(3, 12)
-        row.addItem(QSpacerItem(38, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum), 0, 4)
-        row.addItem(QSpacerItem(45, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum), 0, 5)
-        row.addItem(QSpacerItem(18, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum), 0, 6)
+        row.setColumnMinimumWidth(0, 72)
+        row.setColumnMinimumWidth(1, 53)
+        row.setColumnMinimumWidth(2, 40)
+        row.setColumnMinimumWidth(3, 6)
+        row.addItem(QSpacerItem(58, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum), 0, 4)
+        row.addItem(QSpacerItem(53, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum), 0, 5)
+        row.addItem(QSpacerItem(52, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum), 0, 6)
         row.setColumnStretch(7, 1)
         row.addWidget(line_label, 0, 0)
         row.addWidget(self.line_spacing_spin, 0, 1)
-        row.addWidget(unit_label, 0, 2)
+        row.addWidget(unit_slot, 0, 2)
 
         layout.addWidget(title)
         layout.addLayout(row)
@@ -521,6 +650,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
 
+        self.style_section_labels = {}
         self.title_font_combo, self.title_size_combo = self._create_style_editor(layout, "文档标题")
         self.h1_font_combo, self.h1_size_combo = self._create_style_editor(layout, "一级标题")
         self.h2_font_combo, self.h2_size_combo = self._create_style_editor(layout, "二级标题")
@@ -532,7 +662,7 @@ class MainWindow(QMainWindow):
         section.setObjectName("styleBlock")
         layout = QVBoxLayout(section)
         layout.setContentsMargins(4, 2, 4, 2)
-        layout.setSpacing(3)
+        layout.setSpacing(1)
 
         title = QLabel("导出文档")
         title.setObjectName("subSectionTitle")
@@ -540,25 +670,29 @@ class MainWindow(QMainWindow):
         self.save_path_edit = QLineEdit()
         self.save_path_edit.setObjectName("pathField")
         self.save_path_edit.setPlaceholderText("请选择保存文件夹")
-        self.save_path_edit.setFixedHeight(20)
+        self.save_path_edit.setFixedSize(228, 29)
         self.save_path_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.select_path_button = QPushButton("选择保存位置")
         self.select_path_button.setObjectName("pathButton")
-        self.select_path_button.setFixedHeight(20)
-        self.select_path_button.setFixedWidth(60)
+        self.select_path_button.setFixedSize(98, 27)
+        select_path_slot = QWidget()
+        select_path_slot.setObjectName("transparentSlot")
+        select_path_slot.setFixedSize(103, 27)
+        self.select_path_button.setParent(select_path_slot)
+        self.select_path_button.move(0, 0)
 
         row = QGridLayout()
         row.setContentsMargins(0, 0, 0, 0)
         row.setHorizontalSpacing(4)
         row.setVerticalSpacing(0)
-        row.setColumnMinimumWidth(0, 24)
-        row.setColumnMinimumWidth(1, 98)
-        row.setColumnMinimumWidth(2, 12)
-        row.setColumnMinimumWidth(3, 20)
-        row.setColumnMinimumWidth(4, 60)
-        row.addWidget(self.save_path_edit, 0, 1, 1, 3)
-        row.addWidget(self.select_path_button, 0, 4, alignment=Qt.AlignmentFlag.AlignRight)
+        row.setColumnMinimumWidth(0, 6)
+        row.setColumnMinimumWidth(1, 220)
+        row.setColumnMinimumWidth(2, 8)
+        row.setColumnMinimumWidth(3, 0)
+        row.setColumnMinimumWidth(4, 103)
+        row.addWidget(self.save_path_edit, 0, 1, 1, 3, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        row.addWidget(select_path_slot, 0, 4)
         layout.addWidget(title)
         layout.addLayout(row)
         return section
@@ -570,8 +704,12 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(4, 2, 4, 2)
         layout.setSpacing(2)
 
-        section_label = QLabel(label_text)
-        section_label.setObjectName("subSectionTitle")
+        if label_text == "正文":
+            section_label = self._build_body_title_widget()
+        else:
+            section_label = QLabel(label_text)
+            section_label.setObjectName("subSectionTitle")
+        self.style_section_labels[label_text] = section_label
 
         row = QGridLayout()
         row.setContentsMargins(0, 0, 0, 0)
@@ -579,31 +717,34 @@ class MainWindow(QMainWindow):
         row.setVerticalSpacing(0)
 
         font_label = QLabel("字体")
-        font_label.setFixedWidth(24)
-        font_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font_label.setFixedWidth(47)
+        font_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         row.addWidget(font_label, 0, 0)
 
         font_combo = ClickableComboBox()
         font_combo.setObjectName("fontField")
-        font_combo.setFixedSize(78, 20)
+        font_combo.setFixedSize(164, 27)
         self._configure_centered_combo(font_combo)
         row.addWidget(font_combo, 0, 1)
-        row.setColumnMinimumWidth(2, 16)
+        row.setColumnMinimumWidth(0, 56)
+        row.setColumnMinimumWidth(2, 1)
 
         size_label = QLabel("字号")
-        size_label.setFixedWidth(18)
+        size_label.setFixedWidth(51)
         size_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         row.addWidget(size_label, 0, 3)
 
         size_combo = ClickableComboBox()
         size_combo.setObjectName("sizeField")
-        size_combo.setFixedSize(30, 20)
+        size_combo.setFixedSize(61, 27)
         self._configure_centered_combo(size_combo)
         size_combo.addItems(list(HAO_TO_PT.keys()))
         for index in range(size_combo.count()):
             size_combo.setItemData(index, Qt.AlignmentFlag.AlignCenter, Qt.ItemDataRole.TextAlignmentRole)
         row.addWidget(size_combo, 0, 4)
-        row.setColumnMinimumWidth(4, 30)
+        row.setColumnMinimumWidth(1, 164)
+        row.setColumnMinimumWidth(3, 51)
+        row.setColumnMinimumWidth(4, 61)
         row.setColumnMinimumWidth(5, 0)
 
         layout.addWidget(section_label)

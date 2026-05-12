@@ -1,7 +1,7 @@
 ﻿import sys
 from pathlib import Path
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication
 
@@ -12,7 +12,37 @@ from app.ui.styles import build_stylesheet
 WINDOW_BLUE = "#D7F95A"
 WINDOW_TEXT = "#121712"
 
-WINDOW_APP_ID = "gongwen.paiban.zhushou.v1_2_1.icon20260504r1"
+WINDOW_APP_ID = "gongwen.paiban.zhushou.v1_3.icon20260512r1"
+
+
+def _apply_windows_dpi_awareness() -> None:
+    if sys.platform != "win32":
+        return
+
+    try:
+        QApplication.setHighDpiScaleFactorRoundingPolicy(
+            Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+        )
+    except Exception:
+        pass
+
+    try:
+        import ctypes
+
+        # Keep the window correctly sized when it is opened on, or moved to,
+        # monitors with different display scaling.
+        per_monitor_v2 = ctypes.c_void_p(-4)
+        if ctypes.windll.user32.SetProcessDpiAwarenessContext(per_monitor_v2):
+            return
+    except Exception:
+        pass
+
+    try:
+        import ctypes
+
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    except Exception:
+        return
 
 
 def _apply_windows_app_id() -> None:
@@ -74,10 +104,11 @@ def resource_path(name: str) -> Path:
 
 
 def main() -> int:
+    _apply_windows_dpi_awareness()
     _apply_windows_app_id()
     app = QApplication(sys.argv)
     app.setApplicationName("公文排版助手")
-    app.setApplicationVersion("V1.2.1")
+    app.setApplicationVersion("V1.3")
     app.setStyle("Fusion")
     app.setFont(QFont("\u65b9\u6b63\u5c0f\u6807\u5b8b\u7b80\u4f53", 10))
     app.setStyleSheet(build_stylesheet())

@@ -13,6 +13,8 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    env:
+      DIST_ROOT: dist_release
 
     steps:
       - name: Checkout repository
@@ -24,7 +26,10 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
 
       - name: Build portable EXE
         shell: pwsh
@@ -34,9 +39,9 @@ jobs:
         id: package
         shell: pwsh
         run: |
-          $appDir = Get-ChildItem -Path dist -Directory | Select-Object -First 1
-          if ($null -eq $appDir) { throw 'dist ?????????????' }
-          $zipPath = Join-Path $env:RUNNER_TEMP ($appDir.Name + '.zip')
+          $appDir = Get-ChildItem -Path $env:DIST_ROOT -Directory -Filter '*V1_3' | Select-Object -First 1
+          if ($null -eq $appDir) { throw "No portable app directory was produced under $env:DIST_ROOT." }
+          $zipPath = Join-Path $env:RUNNER_TEMP ($appDir.Name + '-windows-portable.zip')
           Compress-Archive -Path $appDir.FullName -DestinationPath $zipPath -Force
           "app_dir=$($appDir.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "zip_path=$zipPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
@@ -52,5 +57,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          name: 公文排版助手 ${{ github.ref_name }}
           files: ${{ steps.package.outputs.zip_path }}
           body_path: RELEASE_NOTES.md

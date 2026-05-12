@@ -19,7 +19,7 @@ def build_stylesheet() -> str:
         background: #A6B1A3;
         color: #151A15;
         font-family: "\u65b9\u6b63\u5c0f\u6807\u5b8b\u7b80\u4f53", "\u65b9\u6b63\u5c0f\u6807\u5b8b_GBK", "FZYaSong", "Microsoft YaHei UI", "Segoe UI";
-        font-size: 8pt;
+        font-size: 10pt;
     }}
 
     QLabel {{
@@ -69,11 +69,11 @@ def build_stylesheet() -> str:
     #settingsContent QLineEdit,
     #settingsContent QComboBox,
     #settingsContent QSpinBox {{
-        font-size: 7pt;
+        font-size: 9pt;
     }}
 
     #settingsContent QLabel#sectionTitle {{
-        font-size: 8.5pt;
+        font-size: 10.5pt;
     }}
 
     #settingsContent #styleBlock QLabel,
@@ -81,11 +81,11 @@ def build_stylesheet() -> str:
     #settingsContent #styleBlock QComboBox,
     #settingsContent #styleBlock QSpinBox,
     #settingsContent #styleBlock QPushButton {{
-        font-size: 6pt;
+        font-size: 8pt;
     }}
 
     #settingsContent #styleBlock QLabel#subSectionTitle {{
-        font-size: 7.5pt;
+        font-size: 9.5pt;
         padding-left: 26px;
     }}
 
@@ -105,11 +105,11 @@ def build_stylesheet() -> str:
     #styleBlock QComboBox,
     #styleBlock QSpinBox,
     #styleBlock QPushButton {{
-        font-size: 7pt;
+        font-size: 9pt;
     }}
 
     #styleBlock QLabel#subSectionTitle {{
-        font-size: 8.5pt;
+        font-size: 10.5pt;
     }}
 
     #styleDivider {{
@@ -120,14 +120,14 @@ def build_stylesheet() -> str:
     }}
 
     QLabel#sectionTitle {{
-        font-size: 8.5pt;
+        font-size: 10.5pt;
         font-weight: 700;
         color: #141914;
         padding: 0 0 1px 0;
     }}
 
     QLabel#subSectionTitle {{
-        font-size: 8.5pt;
+        font-size: 10.5pt;
         font-weight: 700;
         color: #1B231A;
         padding: 0;
@@ -135,7 +135,7 @@ def build_stylesheet() -> str:
 
     QLabel#mutedText {{
         color: #758173;
-        font-size: 7.5pt;
+        font-size: 9.5pt;
     }}
 
     QPushButton {{
@@ -145,8 +145,8 @@ def build_stylesheet() -> str:
         border-radius: 10px;
         padding: 0 10px;
         font-weight: 600;
-        min-height: 20px;
-        max-height: 20px;
+        min-height: 25px;
+        max-height: 25px;
         text-align: center;
     }}
 
@@ -160,19 +160,21 @@ def build_stylesheet() -> str:
     }}
 
     QPushButton#toolButton {{
-        min-width: 52px;
-        max-width: 52px;
+        min-width: 60px;
+        max-width: 60px;
     }}
 
     QPushButton#actionButton {{
-        min-height: 20px;
-        max-height: 20px;
-        font-size: 8pt;
+        min-height: 25px;
+        max-height: 25px;
+        font-size: 10pt;
     }}
 
     QPushButton#pathButton {{
-        min-width: 60px;
-        max-width: 60px;
+        min-width: 76px;
+        max-width: 76px;
+        min-height: 25px;
+        max-height: 25px;
     }}
 
     QPushButton#toolButton, QPushButton#actionButton, QPushButton#pathButton {{
@@ -189,22 +191,24 @@ def build_stylesheet() -> str:
     }}
 
     QPushButton#primaryButton {{
-        background: #000000;
+        background: #5F7450;
         color: #FFFFFF;
-        border: 1px solid #000000;
+        border: 1px solid #4A5D3E;
         font-weight: 700;
+        min-height: 27px;
+        max-height: 27px;
     }}
 
     QPushButton#primaryButton:hover {{
-        background: #000000;
+        background: #6C835B;
         color: #FFFFFF;
-        border: 1px solid #000000;
+        border: 1px solid #5F7450;
     }}
 
     QPushButton#primaryButton:pressed {{
-        background: #000000;
+        background: #4E6042;
         color: #FFFFFF;
-        border: 1px solid #000000;
+        border: 1px solid #405037;
     }}
 
     QMessageBox, QDialog {{
@@ -266,7 +270,7 @@ def build_stylesheet() -> str:
 
     QPlainTextEdit {{
         background: #FBFDF9;
-        font-size: 9pt;
+        font-size: 11pt;
         line-height: 1.55;
         border-radius: 14px;
         padding: 10px;
@@ -281,39 +285,39 @@ def build_stylesheet() -> str:
     }}
 
     QLineEdit#pathField {{
-        min-height: 20px;
-        max-height: 20px;
+        min-height: 25px;
+        max-height: 25px;
     }}
 
     QComboBox#fontField {{
-        min-width: 78px;
-        max-width: 78px;
-        min-height: 20px;
-        max-height: 20px;
-        padding: 0 16px 0 16px;
+        min-width: 122px;
+        max-width: 122px;
+        min-height: 25px;
+        max-height: 25px;
+        padding: 0 20px 0 20px;
     }}
 
     QComboBox#sizeField {{
-        min-width: 30px;
-        max-width: 30px;
-        min-height: 20px;
-        max-height: 20px;
-        padding: 0 0px 0 10px;
-        font-size: 6pt;
+        min-width: 41px;
+        max-width: 41px;
+        min-height: 25px;
+        max-height: 25px;
+        padding: 0 6px 0 12px;
+        font-size: 8pt;
     }}
 
     QComboBox#sizeField::drop-down {{
-        width: 10px;
+        width: 14px;
     }}
 
     QWidget#marginField, QWidget#lineField {{
         background: #FCFDFB;
         border: 1px solid #C5D0BF;
         border-radius: 10px;
-        min-width: 45px;
-        max-width: 45px;
-        min-height: 22px;
-        max-height: 22px;
+        min-width: 51px;
+        max-width: 51px;
+        min-height: 27px;
+        max-height: 27px;
     }}
 
     QLineEdit#spinValue {{
@@ -321,8 +325,8 @@ def build_stylesheet() -> str:
         border: none;
         color: #1B2219;
         padding: 0;
-        min-height: 20px;
-        max-height: 20px;
+        min-height: 27px;
+        max-height: 27px;
     }}
 
     QWidget#spinButtonBox {{
@@ -337,10 +341,10 @@ def build_stylesheet() -> str:
         border-left: 1px solid #C5D0BF;
         padding: 0;
         margin: 0;
-        min-width: 13px;
-        max-width: 13px;
-        min-height: 10px;
-        max-height: 10px;
+        min-width: 15px;
+        max-width: 15px;
+        min-height: 13px;
+        max-height: 13px;
     }}
 
     QToolButton#spinUpButton {{
@@ -405,6 +409,40 @@ def build_stylesheet() -> str:
         background: transparent;
     }}
 
+    QWidget#transparentSlot {{
+        background: transparent;
+        border: none;
+    }}
+
+    QWidget#statusFooter {{
+        background: #A6B1A3;
+        border: none;
+    }}
+
+    QLabel#statusMessage,
+    QLabel#statusContact {{
+        background: transparent;
+        color: #758173;
+        font-size: 9.5pt;
+        min-height: 16px;
+    }}
+
+    QLabel#statusMessage {{
+        padding: 0;
+    }}
+
+    QLabel#statusContact {{
+        padding: 0;
+    }}
+
+    QLabel#bodyTitleChar {{
+        background: transparent;
+        color: #1B231A;
+        font-size: 10.5pt;
+        font-weight: 700;
+        padding: 0;
+    }}
+
     QAbstractScrollArea::corner {{
         background: #A6B1A3;
         border: none;
@@ -413,10 +451,10 @@ def build_stylesheet() -> str:
     QStatusBar {{
         background: #A6B1A3;
         color: transparent;
-        font-size: 7.5pt;
+        font-size: 9.5pt;
         border: none;
-        min-height: 20px;
-        max-height: 20px;
+        min-height: 31px;
+        max-height: 31px;
     }}
 
     QStatusBar::item {{
@@ -426,9 +464,8 @@ def build_stylesheet() -> str:
     QStatusBar QLabel#statusMessage,
     QStatusBar QLabel#statusContact {{
         color: #758173;
-        font-size: 7.5pt;
-        min-height: 18px;
-        max-height: 18px;
+        font-size: 9.5pt;
+        min-height: 16px;
     }}
 
     QStatusBar QLabel#statusMessage {{
@@ -437,7 +474,7 @@ def build_stylesheet() -> str:
     }}
 
     QStatusBar QLabel#statusContact {{
-        padding: 0 19px 0 4px;
+        padding: 0;
         qproperty-alignment: AlignVCenter | AlignRight;
     }}
     """

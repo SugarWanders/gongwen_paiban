@@ -19,11 +19,16 @@ HAO_TO_PT = {
 }
 
 COMMON_FONTS = [
-    "方正小标宋简体",
     "黑体",
-    "楷体_GB2312",
-    "仿宋_GB2312",
+    "仿宋",
 ]
+
+FONT_FAMILY_ALIASES = {
+    "方正小标宋简体": "黑体",
+    "方正小标宋_GBK": "黑体",
+    "楷体_GB2312": "黑体",
+    "仿宋_GB2312": "仿宋",
+}
 
 DEFAULT_FOCUS_FIELDS = [
     "分析认为",
@@ -69,15 +74,15 @@ class TemplateConfig:
 DEFAULT_TEMPLATE = TemplateConfig(
     margins_mm=MarginConfig(),
     line_spacing_pt=30,
-    title=TextStyleConfig(font_family="方正小标宋简体", font_size_hao="二号"),
+    title=TextStyleConfig(font_family="黑体", font_size_hao="二号"),
     h1=TextStyleConfig(font_family="黑体", font_size_hao="小二"),
-    h2=TextStyleConfig(font_family="楷体_GB2312", font_size_hao="小二"),
-    body=TextStyleConfig(font_family="仿宋_GB2312", font_size_hao="小二"),
+    h2=TextStyleConfig(font_family="黑体", font_size_hao="小二"),
+    body=TextStyleConfig(font_family="仿宋", font_size_hao="小二"),
 )
 
 DEFAULT_FOCUS_FIELD_CONFIG = FocusFieldConfig(
     fields=list(DEFAULT_FOCUS_FIELDS),
-    style=TextStyleConfig(font_family="仿宋_GB2312", font_size_hao="小二"),
+    style=TextStyleConfig(font_family="仿宋", font_size_hao="小二"),
     bold=True,
 )
 
@@ -87,7 +92,10 @@ def hao_to_pt(size_label: str) -> float:
 
 
 def template_to_dict(template: TemplateConfig) -> dict:
-    return asdict(template)
+    data = asdict(template)
+    for key in ("title", "h1", "h2", "body"):
+        data[key]["font_family"] = normalize_config_font_family(data[key]["font_family"])
+    return data
 
 
 def template_from_dict(data: dict) -> TemplateConfig:
@@ -106,19 +114,19 @@ def template_from_dict(data: dict) -> TemplateConfig:
         ),
         line_spacing_pt=int(data.get("line_spacing_pt", DEFAULT_TEMPLATE.line_spacing_pt)),
         title=TextStyleConfig(
-            font_family=str(title.get("font_family", DEFAULT_TEMPLATE.title.font_family)),
+            font_family=normalize_config_font_family(title.get("font_family", DEFAULT_TEMPLATE.title.font_family)),
             font_size_hao=str(title.get("font_size_hao", DEFAULT_TEMPLATE.title.font_size_hao)),
         ),
         h1=TextStyleConfig(
-            font_family=str(h1.get("font_family", DEFAULT_TEMPLATE.h1.font_family)),
+            font_family=normalize_config_font_family(h1.get("font_family", DEFAULT_TEMPLATE.h1.font_family)),
             font_size_hao=str(h1.get("font_size_hao", DEFAULT_TEMPLATE.h1.font_size_hao)),
         ),
         h2=TextStyleConfig(
-            font_family=str(h2.get("font_family", DEFAULT_TEMPLATE.h2.font_family)),
+            font_family=normalize_config_font_family(h2.get("font_family", DEFAULT_TEMPLATE.h2.font_family)),
             font_size_hao=str(h2.get("font_size_hao", DEFAULT_TEMPLATE.h2.font_size_hao)),
         ),
         body=TextStyleConfig(
-            font_family=str(body.get("font_family", DEFAULT_TEMPLATE.body.font_family)),
+            font_family=normalize_config_font_family(body.get("font_family", DEFAULT_TEMPLATE.body.font_family)),
             font_size_hao=str(body.get("font_size_hao", DEFAULT_TEMPLATE.body.font_size_hao)),
         ),
     )
@@ -127,7 +135,10 @@ def template_from_dict(data: dict) -> TemplateConfig:
 def focus_field_config_to_dict(config: FocusFieldConfig) -> dict:
     return {
         "fields": _normalize_focus_fields(config.fields),
-        "style": asdict(config.style),
+        "style": {
+            "font_family": normalize_config_font_family(config.style.font_family),
+            "font_size_hao": config.style.font_size_hao,
+        },
         "bold": bool(config.bold),
     }
 
@@ -138,7 +149,9 @@ def focus_field_config_from_dict(data: dict) -> FocusFieldConfig:
     return FocusFieldConfig(
         fields=_normalize_focus_fields(data.get("fields", DEFAULT_FOCUS_FIELDS)),
         style=TextStyleConfig(
-            font_family=str(style.get("font_family", DEFAULT_FOCUS_FIELD_CONFIG.style.font_family)),
+            font_family=normalize_config_font_family(
+                style.get("font_family", DEFAULT_FOCUS_FIELD_CONFIG.style.font_family)
+            ),
             font_size_hao=str(style.get("font_size_hao", DEFAULT_FOCUS_FIELD_CONFIG.style.font_size_hao)),
         ),
         bold=bool(data.get("bold", DEFAULT_FOCUS_FIELD_CONFIG.bold)),
@@ -157,3 +170,8 @@ def _normalize_focus_fields(values: list[str] | tuple[str, ...] | object) -> lis
         if field and field not in normalized:
             normalized.append(field)
     return normalized
+
+
+def normalize_config_font_family(font_name: object) -> str:
+    normalized = str(font_name).strip()
+    return FONT_FAMILY_ALIASES.get(normalized, normalized)

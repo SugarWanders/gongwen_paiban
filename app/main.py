@@ -5,7 +5,6 @@ from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication
 
-from app.services.bundled_fonts import register_bundled_fonts
 from app.ui.main_window import MainWindow
 from app.ui.styles import build_stylesheet
 
@@ -111,7 +110,6 @@ def main() -> int:
     app.setApplicationName("公文排版助手")
     app.setApplicationVersion("V1.3.1")
     app.setStyle("Fusion")
-    register_bundled_fonts()
     app.setFont(QFont("\u65b9\u6b63\u5c0f\u6807\u5b8b\u7b80\u4f53", 10))
     app.setStyleSheet(build_stylesheet())
 

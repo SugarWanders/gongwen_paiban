@@ -14,6 +14,7 @@ def build_stylesheet() -> str:
     arrow_uri = _asset_uri("down-arrow.svg")
     spin_up_arrow_uri = _asset_uri("up-arrow.svg")
     spin_down_arrow_uri = _asset_uri("down-arrow.svg")
+    checkmark_uri = _asset_uri("checkmark.svg")
     return f"""
     QWidget {{
         background: #A6B1A3;
@@ -398,6 +399,59 @@ def build_stylesheet() -> str:
     QComboBox QAbstractItemView::item:hover {{
         color: #171D16;
         background: #ECF6CC;
+    }}
+
+    QDialog QLabel#focusStyleLabel {{
+        color: #111711;
+        font-weight: 700;
+        padding: 0;
+        min-height: 29px;
+        max-height: 29px;
+    }}
+
+    QComboBox#focusFontField,
+    QComboBox#focusSizeField {{
+        background: #FCFDFB;
+        border: 1px solid #C5D0BF;
+        border-radius: 10px;
+        color: #111711;
+        font-weight: 700;
+        min-height: 27px;
+        max-height: 27px;
+    }}
+
+    QComboBox#focusFontField:focus,
+    QComboBox#focusSizeField:focus {{
+        border: 1px solid #AFC861;
+        background: #FFFFFF;
+    }}
+
+    QCheckBox#focusBoldCheckbox {{
+        background: transparent;
+        border: none;
+        color: #111711;
+        font-weight: 700;
+        padding: 0;
+        spacing: 8px;
+        min-height: 29px;
+        max-height: 29px;
+    }}
+
+    QCheckBox#focusBoldCheckbox::indicator {{
+        width: 27px;
+        height: 27px;
+        background: #FCFDFB;
+        border: 1px solid #C5D0BF;
+        border-radius: 10px;
+    }}
+
+    QCheckBox#focusBoldCheckbox::indicator:hover {{
+        background: #FFFFFF;
+        border: 1px solid #AFC861;
+    }}
+
+    QCheckBox#focusBoldCheckbox::indicator:checked {{
+        image: url("{checkmark_uri}");
     }}
 
     QListWidget#dialogList {{

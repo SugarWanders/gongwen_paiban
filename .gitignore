@@ -11,3 +11,6 @@ config/font_preferences.json
 config/focus_fields.json
 ui_preview_latest.png
 ui_measurements/
+mockups/
+skill_release_V1_3_1/
+skill_package/

@@ -4,7 +4,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QSize, Qt
+from PySide6.QtCore import QEvent, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QIcon, QIntValidator, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
 
 from app.models.settings import (
     DEFAULT_FOCUS_FIELDS,
+    DEFAULT_TEMPLATE,
     FocusFieldConfig,
     HAO_TO_PT,
     MarginConfig,
@@ -45,9 +46,7 @@ from app.models.settings import (
 )
 from app.services.document_importer import import_text_document
 from app.services.bundled_fonts import (
-    BUNDLED_FONT_FAMILIES,
     display_font_name,
-    is_bundled_font,
     normalize_font_family,
 )
 from app.services.export_service import export_docx_document
@@ -75,6 +74,8 @@ STATUS_MESSAGE_SHIFT = 3
 
 
 class AlignedSpinBox(QWidget):
+    valueChanged = Signal(int)
+
     def __init__(self, minimum: int, maximum: int, object_name: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._minimum = minimum
@@ -138,8 +139,11 @@ class AlignedSpinBox(QWidget):
 
     def setValue(self, value: int) -> None:
         bounded = max(self._minimum, min(self._maximum, int(value)))
+        changed = bounded != self._value
         self._value = bounded
         self.line_edit.setText(str(bounded))
+        if changed:
+            self.valueChanged.emit(bounded)
 
     def value(self) -> int:
         self._commit_text()
@@ -247,6 +251,8 @@ class FocusFieldsDialog(QDialog):
     WIDTH = 520
     MIN_HEIGHT = 410
     MAX_HEIGHT = 680
+    STYLE_ROW_HEIGHT = 29
+    STYLE_COMBO_HEIGHT = 27
 
     def __init__(self, config: FocusFieldConfig, fonts: list[str], parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -335,28 +341,36 @@ class FocusFieldsDialog(QDialog):
         format_layout = QHBoxLayout(format_row)
         format_layout.setContentsMargins(10, 0, 0, 0)
         format_layout.setSpacing(8)
+        format_row.setFixedHeight(self.STYLE_ROW_HEIGHT)
 
         font_label = QLabel("字体")
+        font_label.setObjectName("focusStyleLabel")
+        font_label.setFixedHeight(self.STYLE_ROW_HEIGHT)
+        font_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         size_label = QLabel("字号")
+        size_label.setObjectName("focusStyleLabel")
+        size_label.setFixedHeight(self.STYLE_ROW_HEIGHT)
+        size_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
 
         self.focus_font_combo = ClickableComboBox()
         self.focus_font_combo.setObjectName("focusFontField")
         self._add_font_items(self.focus_font_combo, self.fonts)
         self._configure_dialog_combo(self.focus_font_combo)
-        self.focus_font_combo.setFixedSize(132, 25)
+        self.focus_font_combo.setFixedSize(132, self.STYLE_COMBO_HEIGHT)
         self._set_font_combo_value(self.focus_font_combo, config.style.font_family)
 
         self.focus_size_combo = ClickableComboBox()
         self.focus_size_combo.setObjectName("focusSizeField")
         self.focus_size_combo.addItems(list(HAO_TO_PT.keys()))
         self._configure_dialog_combo(self.focus_size_combo)
-        self.focus_size_combo.setFixedSize(79, 25)
+        self.focus_size_combo.setFixedSize(79, self.STYLE_COMBO_HEIGHT)
         self.focus_size_combo.lineEdit().setTextMargins(12, 0, 0, 0)
         self.focus_size_combo.setCurrentText(config.style.font_size_hao)
 
         self.focus_bold_checkbox = QCheckBox("加粗")
+        self.focus_bold_checkbox.setObjectName("focusBoldCheckbox")
+        self.focus_bold_checkbox.setFixedHeight(self.STYLE_ROW_HEIGHT)
         self.focus_bold_checkbox.setChecked(config.bold)
-        self.focus_bold_checkbox.setStyleSheet("QCheckBox { background: transparent; border: none; }")
 
         format_layout.addWidget(font_label, 0)
         format_layout.addWidget(self.focus_font_combo, 0)
@@ -1074,6 +1088,25 @@ class MainWindow(QMainWindow):
         self.select_path_button.clicked.connect(self._select_save_path)
         self.export_button.clicked.connect(self._export_document)
         self.editor.textChanged.connect(self._refresh_statistics)
+        for spin_box in (
+            self.top_margin_spin,
+            self.bottom_margin_spin,
+            self.left_margin_spin,
+            self.right_margin_spin,
+            self.line_spacing_spin,
+        ):
+            spin_box.valueChanged.connect(self._auto_save_current_template)
+        for combo in (
+            self.title_font_combo,
+            self.title_size_combo,
+            self.h1_font_combo,
+            self.h1_size_combo,
+            self.h2_font_combo,
+            self.h2_size_combo,
+            self.body_font_combo,
+            self.body_size_combo,
+        ):
+            combo.currentIndexChanged.connect(self._auto_save_current_template)
 
     def _populate_style_font_combos(self, fonts: list[str]) -> None:
         defaults = [
@@ -1191,8 +1224,14 @@ class MainWindow(QMainWindow):
         self._set_status_message("编辑内容已恢复为默认说明。")
 
     def _restore_default_parameters(self) -> None:
-        self.default_template = load_default_template()
-        self.removed_fonts.difference_update(BUNDLED_FONT_FAMILIES)
+        self.default_template = DEFAULT_TEMPLATE
+        default_fonts = {
+            normalize_font_family(self.default_template.title.font_family),
+            normalize_font_family(self.default_template.h1.font_family),
+            normalize_font_family(self.default_template.h2.font_family),
+            normalize_font_family(self.default_template.body.font_family),
+        }
+        self.removed_fonts.difference_update(default_fonts)
         try:
             self._save_font_preferences()
         except OSError as exc:
@@ -1204,6 +1243,10 @@ class MainWindow(QMainWindow):
             self.default_template.body.font_family,
         ])
         self._load_template_into_form(self.default_template)
+        try:
+            save_default_template(self.default_template)
+        except OSError as exc:
+            QMessageBox.warning(self, "恢复失败", f"默认参数保存失败：{exc}")
 
         self.default_save_path = None
         self.last_declined_default_save_path = None
@@ -1218,7 +1261,7 @@ class MainWindow(QMainWindow):
     def _set_current_as_default(self) -> None:
         self.default_template = self._build_template_from_form()
         try:
-            config_path = save_default_template(self.default_template)
+            config_path = self._save_current_template()
         except OSError as exc:
             QMessageBox.critical(self, "保存失败", f"默认参数保存失败：{exc}")
             return
@@ -1227,11 +1270,7 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "保存成功", "当前参数已设为默认值，下次打开软件会自动加载。")
 
     def _load_local_fonts(self) -> None:
-        options = [
-            font_name
-            for font_name in self._merge_unique_fonts(get_installed_font_candidates())
-            if not is_bundled_font(font_name)
-        ]
+        options = self._merge_unique_fonts(get_installed_font_candidates())
         dialog = FontSelectionDialog(
             "加载本地字体",
             "\u5b57\u4f53\u6765\u6e90\uff1aC:\\Windows\\Fonts\n\u8bf7\u9009\u62e9\u9700\u8981\u52a0\u8f7d\u7684\u5b57\u4f53\uff0c\u53ef\u591a\u9009\u3002",
@@ -1268,7 +1307,6 @@ class MainWindow(QMainWindow):
             "\u8bf7\u9009\u62e9\u9700\u8981\u5220\u9664\u7684\u5b57\u4f53\uff0c\u53ef\u591a\u9009\u3002",
             list(self.available_fonts),
             self,
-            mark_bundled_fonts=True,
         )
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
@@ -1418,6 +1456,23 @@ class MainWindow(QMainWindow):
             ),
         )
 
+    def _save_current_template(self) -> Path:
+        self.default_template = self._build_template_from_form()
+        return save_default_template(self.default_template)
+
+    def _auto_save_current_template(self, *_args) -> None:
+        try:
+            self._save_current_template()
+        except OSError as exc:
+            self._set_status_message(f"排版参数自动保存失败：{exc}")
+
+    def closeEvent(self, event) -> None:
+        try:
+            self._save_current_template()
+        except OSError:
+            pass
+        super().closeEvent(event)
+
     def _export_document(self) -> None:
         text = self.editor.toPlainText().strip()
         if not text or self._is_default_editor_content(text):
@@ -1431,6 +1486,10 @@ class MainWindow(QMainWindow):
                 return
         self.save_path_edit.setText(save_directory)
         self._maybe_ask_set_default_save_path(save_directory)
+        try:
+            self._save_current_template()
+        except OSError as exc:
+            QMessageBox.warning(self, "保存失败", f"排版参数保存失败：{exc}")
         try:
             exported_path = export_docx_document(
                 text,

@@ -11,8 +11,8 @@ a = Analysis(
     datas=[
         ("icon.png", "."),
         ("icon.ico", "."),
-        ("app/fonts", "app/fonts"),
         ("app/ui/assets/down-arrow.svg", "app/ui/assets"),
+        ("app/ui/assets/checkmark.svg", "app/ui/assets"),
         ("app/ui/assets/up-arrow.svg", "app/ui/assets"),
     ],
     hiddenimports=[],

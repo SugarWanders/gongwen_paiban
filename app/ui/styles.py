@@ -400,6 +400,35 @@ def build_stylesheet() -> str:
         background: #ECF6CC;
     }}
 
+    QListWidget#dialogList {{
+        background: #F7FAF4;
+        border: 1px solid #D7E5D0;
+        border-radius: 10px;
+        color: #151A15;
+        font-size: 10pt;
+        outline: 0;
+        padding: 4px;
+        selection-background-color: #D7F95A;
+        selection-color: #151A15;
+    }}
+
+    QListWidget#dialogList::item {{
+        background: transparent;
+        color: #151A15;
+        min-height: 22px;
+        padding: 2px 6px;
+    }}
+
+    QListWidget#dialogList::item:selected {{
+        background: #D7F95A;
+        color: #151A15;
+    }}
+
+    QListWidget#dialogList::item:hover {{
+        background: #ECF6CC;
+        color: #151A15;
+    }}
+
     QScrollArea {{
         border: none;
         background: transparent;

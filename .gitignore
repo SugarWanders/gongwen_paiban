@@ -8,5 +8,6 @@ dist_*/
 config/default_template.json
 config/default_save_path.json
 config/font_preferences.json
+config/focus_fields.json
 ui_preview_latest.png
 ui_measurements/

@@ -3,12 +3,13 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectRoot
 
-$distFolderName = "dist_release"
+$distFolderName = "dist"
+$appFolderSuffix = "V1_3_1"
 $distPath = Join-Path $projectRoot $distFolderName
 $workPath = Join-Path ([System.IO.Path]::GetTempPath()) ("gongwen_paiban_build_" + [guid]::NewGuid().ToString("N"))
 
 if (Test-Path $distPath) {
-    Get-ChildItem -Path $distPath -Directory -Filter "*V1_3" | Remove-Item -Recurse -Force
+    Get-ChildItem -Path $distPath -Directory | Remove-Item -Recurse -Force
 }
 
 try {
@@ -17,7 +18,7 @@ try {
         throw "PyInstaller build failed with exit code $LASTEXITCODE"
     }
 
-    $appDistPath = Get-ChildItem -Path $distPath -Directory -Filter "*V1_3" | Select-Object -First 1
+    $appDistPath = Get-ChildItem -Path $distPath -Directory | Where-Object { $_.Name -like "*$appFolderSuffix" } | Select-Object -First 1
     if ($null -eq $appDistPath) {
         throw "Portable app directory was not produced under: $distPath"
     }
@@ -25,6 +26,11 @@ try {
     $exe = Get-ChildItem -Path $appDistPath.FullName -Filter *.exe | Select-Object -First 1
     if ($null -eq $exe) {
         throw "Portable EXE was not produced: $($appDistPath.FullName)"
+    }
+
+    $appConfigPath = Join-Path $appDistPath.FullName "config"
+    if (Test-Path $appConfigPath) {
+        Remove-Item -LiteralPath $appConfigPath -Recurse -Force
     }
 }
 finally {

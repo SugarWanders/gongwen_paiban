@@ -1,7 +1,7 @@
 ﻿# -*- mode: python ; coding: utf-8 -*-
 
 
-app_name = "公文排版助手V1_3"
+app_name = "公文排版助手V1_3_1"
 
 
 a = Analysis(
@@ -11,6 +11,7 @@ a = Analysis(
     datas=[
         ("icon.png", "."),
         ("icon.ico", "."),
+        ("app/fonts", "app/fonts"),
         ("app/ui/assets/down-arrow.svg", "app/ui/assets"),
         ("app/ui/assets/up-arrow.svg", "app/ui/assets"),
     ],

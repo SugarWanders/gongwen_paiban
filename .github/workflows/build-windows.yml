@@ -14,7 +14,8 @@ jobs:
     permissions:
       contents: write
     env:
-      DIST_ROOT: dist_release
+      DIST_ROOT: dist
+      APP_FOLDER_PATTERN: '*V1_3_1'
 
     steps:
       - name: Checkout repository
@@ -39,7 +40,7 @@ jobs:
         id: package
         shell: pwsh
         run: |
-          $appDir = Get-ChildItem -Path $env:DIST_ROOT -Directory -Filter '*V1_3' | Select-Object -First 1
+          $appDir = Get-ChildItem -Path $env:DIST_ROOT -Directory -Filter $env:APP_FOLDER_PATTERN | Select-Object -First 1
           if ($null -eq $appDir) { throw "No portable app directory was produced under $env:DIST_ROOT." }
           $zipPath = Join-Path $env:RUNNER_TEMP ($appDir.Name + '-windows-portable.zip')
           Compress-Archive -Path $appDir.FullName -DestinationPath $zipPath -Force

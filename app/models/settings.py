@@ -23,12 +23,7 @@ COMMON_FONTS = [
     "仿宋",
 ]
 
-FONT_FAMILY_ALIASES = {
-    "方正小标宋简体": "黑体",
-    "方正小标宋_GBK": "黑体",
-    "楷体_GB2312": "黑体",
-    "仿宋_GB2312": "仿宋",
-}
+FONT_FAMILY_ALIASES = {}
 
 DEFAULT_FOCUS_FIELDS = [
     "分析认为",

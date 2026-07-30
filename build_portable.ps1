@@ -4,7 +4,7 @@ $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectRoot
 
 $distFolderName = "dist"
-$appFolderSuffix = "V1_3_1"
+$appFolderSuffix = "V1_3_2"
 $distPath = Join-Path $projectRoot $distFolderName
 $workPath = Join-Path ([System.IO.Path]::GetTempPath()) ("gongwen_paiban_build_" + [guid]::NewGuid().ToString("N"))
 

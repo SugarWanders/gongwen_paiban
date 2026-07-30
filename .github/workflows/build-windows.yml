@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - python
+      - 'codex/v*'
     tags:
       - 'v*'
   workflow_dispatch:
@@ -15,7 +16,7 @@ jobs:
       contents: write
     env:
       DIST_ROOT: dist
-      APP_FOLDER_PATTERN: '*V1_3_1'
+      APP_FOLDER_PATTERN: '*V1_3_2'
 
     steps:
       - name: Checkout repository

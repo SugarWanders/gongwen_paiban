@@ -12,7 +12,7 @@ from app.ui.styles import build_stylesheet
 WINDOW_BLUE = "#D7F95A"
 WINDOW_TEXT = "#121712"
 
-WINDOW_APP_ID = "gongwen.paiban.zhushou.v1_3_1.icon20260525r1"
+WINDOW_APP_ID = "gongwen.paiban.zhushou.v1_3_2.icon20260730r1"
 
 
 def _apply_windows_dpi_awareness() -> None:
@@ -108,7 +108,7 @@ def main() -> int:
     _apply_windows_app_id()
     app = QApplication(sys.argv)
     app.setApplicationName("公文排版助手")
-    app.setApplicationVersion("V1.3.1")
+    app.setApplicationVersion("V1.3.2")
     app.setStyle("Fusion")
     app.setFont(QFont("\u65b9\u6b63\u5c0f\u6807\u5b8b\u7b80\u4f53", 10))
     app.setStyleSheet(build_stylesheet())

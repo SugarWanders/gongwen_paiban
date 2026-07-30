@@ -497,7 +497,7 @@ class FocusFieldsDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("公文排版助手 V1.3.1")
+        self.setWindowTitle("公文排版助手 V1.3.2")
         self.resize(WINDOW_SIZE)
         self.setMinimumSize(WINDOW_SIZE)
         self.setMaximumHeight(WINDOW_SIZE.height())

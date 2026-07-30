@@ -939,17 +939,30 @@ class MainWindow(QMainWindow):
         unit_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.line_spacing_unit_label = unit_label
 
+        self.clean_body_spaces_checkbox = QCheckBox("检查正文空格")
+        self.clean_body_spaces_checkbox.setObjectName("bodySpaceCheckBox")
+        self.clean_body_spaces_checkbox.setFixedSize(163, 29)
+        self.clean_body_spaces_checkbox.setToolTip("导出时清理正文中的多余空格")
+
         row.setColumnMinimumWidth(0, 72)
         row.setColumnMinimumWidth(1, 53)
         row.setColumnMinimumWidth(2, 40)
         row.setColumnMinimumWidth(3, 6)
-        row.addItem(QSpacerItem(58, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum), 0, 4)
-        row.addItem(QSpacerItem(53, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum), 0, 5)
-        row.addItem(QSpacerItem(52, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum), 0, 6)
+        row.setColumnMinimumWidth(4, 58)
+        row.setColumnMinimumWidth(5, 53)
+        row.setColumnMinimumWidth(6, 52)
         row.setColumnStretch(7, 1)
         row.addWidget(line_label, 0, 0)
         row.addWidget(self.line_spacing_spin, 0, 1)
         row.addWidget(unit_slot, 0, 2)
+        row.addWidget(
+            self.clean_body_spaces_checkbox,
+            0,
+            4,
+            1,
+            3,
+            Qt.AlignmentFlag.AlignCenter,
+        )
 
         layout.addWidget(title)
         layout.addLayout(row)
@@ -1088,6 +1101,7 @@ class MainWindow(QMainWindow):
         self.select_path_button.clicked.connect(self._select_save_path)
         self.export_button.clicked.connect(self._export_document)
         self.editor.textChanged.connect(self._refresh_statistics)
+        self.clean_body_spaces_checkbox.toggled.connect(self._auto_save_current_template)
         for spin_box in (
             self.top_margin_spin,
             self.bottom_margin_spin,
@@ -1163,6 +1177,7 @@ class MainWindow(QMainWindow):
         self.left_margin_spin.setValue(template.margins_mm.left)
         self.right_margin_spin.setValue(template.margins_mm.right)
         self.line_spacing_spin.setValue(template.line_spacing_pt)
+        self.clean_body_spaces_checkbox.setChecked(template.clean_body_spaces)
         if normalize_font_family(template.title.font_family) in self.available_fonts:
             self._set_font_combo_value(self.title_font_combo, template.title.font_family)
         if normalize_font_family(template.h1.font_family) in self.available_fonts:
@@ -1454,6 +1469,7 @@ class MainWindow(QMainWindow):
                 font_family=self._current_font_combo_value(self.body_font_combo),
                 font_size_hao=self.body_size_combo.currentText(),
             ),
+            clean_body_spaces=self.clean_body_spaces_checkbox.isChecked(),
         )
 
     def _save_current_template(self) -> Path:

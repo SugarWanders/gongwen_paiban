@@ -64,6 +64,7 @@ class TemplateConfig:
     h1: TextStyleConfig
     h2: TextStyleConfig
     body: TextStyleConfig
+    clean_body_spaces: bool = True
 
 
 DEFAULT_TEMPLATE = TemplateConfig(
@@ -73,6 +74,7 @@ DEFAULT_TEMPLATE = TemplateConfig(
     h1=TextStyleConfig(font_family="黑体", font_size_hao="小二"),
     h2=TextStyleConfig(font_family="黑体", font_size_hao="小二"),
     body=TextStyleConfig(font_family="仿宋", font_size_hao="小二"),
+    clean_body_spaces=True,
 )
 
 DEFAULT_FOCUS_FIELD_CONFIG = FocusFieldConfig(
@@ -94,11 +96,17 @@ def template_to_dict(template: TemplateConfig) -> dict:
 
 
 def template_from_dict(data: dict) -> TemplateConfig:
-    margins = data.get("margins_mm", {})
-    title = data.get("title", {})
-    h1 = data.get("h1", {})
-    h2 = data.get("h2", {})
-    body = data.get("body", {})
+    if not isinstance(data, dict):
+        return DEFAULT_TEMPLATE
+
+    margins = _dict_value(data, "margins_mm")
+    title = _dict_value(data, "title")
+    h1 = _dict_value(data, "h1")
+    h2 = _dict_value(data, "h2")
+    body = _dict_value(data, "body")
+    clean_body_spaces = data.get("clean_body_spaces", DEFAULT_TEMPLATE.clean_body_spaces)
+    if not isinstance(clean_body_spaces, bool):
+        clean_body_spaces = DEFAULT_TEMPLATE.clean_body_spaces
 
     return TemplateConfig(
         margins_mm=MarginConfig(
@@ -124,7 +132,13 @@ def template_from_dict(data: dict) -> TemplateConfig:
             font_family=normalize_config_font_family(body.get("font_family", DEFAULT_TEMPLATE.body.font_family)),
             font_size_hao=str(body.get("font_size_hao", DEFAULT_TEMPLATE.body.font_size_hao)),
         ),
+        clean_body_spaces=clean_body_spaces,
     )
+
+
+def _dict_value(data: dict, key: str) -> dict:
+    value = data.get(key, {})
+    return value if isinstance(value, dict) else {}
 
 
 def focus_field_config_to_dict(config: FocusFieldConfig) -> dict:

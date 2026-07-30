@@ -454,6 +454,35 @@ def build_stylesheet() -> str:
         image: url("{checkmark_uri}");
     }}
 
+    QCheckBox#bodySpaceCheckBox {{
+        background: transparent;
+        border: none;
+        color: #1B231A;
+        font-size: 8pt;
+        font-weight: 600;
+        padding: 0;
+        spacing: 5px;
+        min-height: 29px;
+        max-height: 29px;
+    }}
+
+    QCheckBox#bodySpaceCheckBox::indicator {{
+        width: 17px;
+        height: 17px;
+        background: #FCFDFB;
+        border: 1px solid #C5D0BF;
+        border-radius: 5px;
+    }}
+
+    QCheckBox#bodySpaceCheckBox::indicator:hover {{
+        background: #FFFFFF;
+        border: 1px solid #AFC861;
+    }}
+
+    QCheckBox#bodySpaceCheckBox::indicator:checked {{
+        image: url("{checkmark_uri}");
+    }}
+
     QListWidget#dialogList {{
         background: #F7FAF4;
         border: 1px solid #D7E5D0;

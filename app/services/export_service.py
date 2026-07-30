@@ -11,6 +11,7 @@ from app.services.title_classifier import classify_paragraphs
 INVALID_FILENAME_CHARS = re.compile(r'[\\/:*?"<>|]+')
 ENGLISH_INLINE_SPACING = re.compile(r"(?<=[A-Za-z0-9])([,;])(?=[A-Za-z])")
 CHINESE_INLINE_SPACING = re.compile(r"(?<=[，。；：？！])\s+(?=[\u3400-\u9fff])")
+CHINESE_SPACING_PUNCTUATION = set("，。；：？！、（）【】｛｝《》“”‘’")
 CONTEXT_PUNCTUATION = set(
     ",，.。．;；:：?？！!()（）[]【】{}｛｝<>《》\"“”'‘’、"
 )
@@ -83,6 +84,10 @@ def export_docx_document(
     paragraphs = classify_paragraphs(normalized_text)
     if not paragraphs:
         raise ValueError("没有可导出的正文内容。")
+    if template.clean_body_spaces:
+        for paragraph_data in paragraphs:
+            if paragraph_data["type"] == "body":
+                paragraph_data["text"] = normalize_body_spacing_for_output(paragraph_data["text"])
 
     target_path = _build_export_path(paragraphs, save_directory)
 
@@ -205,6 +210,42 @@ def _split_focus_segments(text: str, focus_values: list[str]) -> list[tuple[str,
 def normalize_punctuation_for_output(text: str) -> str:
     normalized_lines = [_normalize_line_punctuation(line) for line in text.splitlines()]
     return "\n".join(normalized_lines)
+
+
+def normalize_body_spacing_for_output(text: str) -> str:
+    normalized_lines = [_normalize_body_line_spacing(line) for line in text.splitlines()]
+    return "\n".join(normalized_lines)
+
+
+def _normalize_body_line_spacing(text: str) -> str:
+    normalized: list[str] = []
+    index = 0
+
+    while index < len(text):
+        char = text[index]
+        if not char.isspace():
+            normalized.append(char)
+            index += 1
+            continue
+
+        while index < len(text) and text[index].isspace():
+            index += 1
+
+        left = normalized[-1] if normalized else None
+        right = text[index] if index < len(text) else None
+        if left is None or right is None:
+            continue
+        if _should_remove_body_space(left, right):
+            continue
+        normalized.append(" ")
+
+    return "".join(normalized)
+
+
+def _should_remove_body_space(left: str, right: str) -> bool:
+    if _is_chinese_char(left) and _is_chinese_char(right):
+        return True
+    return left in CHINESE_SPACING_PUNCTUATION or right in CHINESE_SPACING_PUNCTUATION
 
 
 def _normalize_line_punctuation(text: str) -> str:
